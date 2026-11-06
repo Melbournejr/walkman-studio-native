@@ -6,13 +6,13 @@ import argparse,hashlib,json,os,re,struct,subprocess,sys,tempfile,zipfile
 root=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser()
 parser.add_argument('apk',type=Path)
-parser.add_argument('--stage',choices=['7','8','9','9b','9c','9d','10'],default='7')
+parser.add_argument('--stage',choices=['7','8','9','9b','9c','9d','10','11'],default='7')
 parser.add_argument('--previous-apk',type=Path)
 arguments=parser.parse_args()
 label=arguments.stage
 stage=9 if label in ('9b','9c','9d') else int(label)
 apk=arguments.apk.resolve()
-version_code,version_name={'7':(100,'1.0.0-native'),'8':(101,'1.1.0-native-stage8'),'9':(102,'1.2.0-native-stage9'),'9b':(103,'1.2.1-native-stage9b'),'9c':(104,'1.2.2-native-stage9c'),'9d':(105,'1.2.3-native-stage9d'),'10':(106,'1.3.0-native-ota')}[label]
+version_code,version_name={'7':(100,'1.0.0-native'),'8':(101,'1.1.0-native-stage8'),'9':(102,'1.2.0-native-stage9'),'9b':(103,'1.2.1-native-stage9b'),'9c':(104,'1.2.2-native-stage9c'),'9d':(105,'1.2.3-native-stage9d'),'10':(106,'1.3.0-native-ota'),'11':(107,'1.3.1-native-usb')}[label]
 config=Path('/workspace/native-toolchain/paths.json')
 paths=json.loads(config.read_text()) if config.exists() else {'sdk':os.environ.get('ANDROID_SDK_ROOT') or os.environ['ANDROID_HOME'],'java':os.environ['JAVA_HOME']}
 sdk=Path(paths['sdk']);bt=sdk/'build-tools/35.0.0';java=Path(paths['java'])/'bin/java'
@@ -23,9 +23,10 @@ manifest=run(bt/'aapt2','dump','xmltree','--file','AndroidManifest.xml',apk)
 assert "name='com.walkmanstudio.nativeplayer'" in badging
 assert f"versionCode='{version_code}'" in badging and f"versionName='{version_name}'" in badging
 assert "minSdkVersion:'26'" in badging and "targetSdkVersion:'35'" in badging
-if label=='10':
+if stage>=10:
  for required in ['android.permission.INTERNET','android.permission.ACCESS_NETWORK_STATE','android.permission.REQUEST_INSTALL_PACKAGES','android.permission.POST_NOTIFICATIONS']:assert required in permissions,required
 else:assert 'android.permission.INTERNET' not in permissions
+if stage>=11:assert 'android.permission.MODIFY_AUDIO_SETTINGS' in permissions
 for forbidden in ['android.permission.MANAGE_EXTERNAL_STORAGE','android.permission.READ_MEDIA_AUDIO','android.permission.READ_EXTERNAL_STORAGE','android.permission.WRITE_EXTERNAL_STORAGE']:
  assert forbidden not in permissions,forbidden
 def attribute(name):
@@ -46,16 +47,16 @@ if stage>=8:
  previous_badging=run(bt/'aapt2','dump','badging',arguments.previous_apk)
  assert "name='com.walkmanstudio.nativeplayer'" in previous_badging
  previous_code=int(re.search(r"versionCode='(\d+)'",previous_badging).group(1))
- assert previous_code==({'9b':102,'9c':103,'9d':104,'10':105}.get(label,100)) and version_code>previous_code
- if label in ('9b','9c','9d','10'):assert version_code==previous_code+1
+ assert previous_code==({'9b':102,'9c':103,'9d':104,'10':105,'11':106}.get(label,100)) and version_code>previous_code
+ if label in ('9b','9c','9d','10','11'):assert version_code==previous_code+1
  previous_cert=run(java,'-jar',bt/'lib/apksigner.jar','verify','--verbose','--print-certs',arguments.previous_apk)
  assert 'Verified using v2 scheme (APK Signature Scheme v2): true' in previous_cert
  previous_certificate=re.search(r'Signer #1 certificate SHA-256 digest: (\w+)',previous_cert).group(1)
  assert certificate==previous_certificate,'Different signing certificates cannot update the installed APK'
- if label in ('9b','9c','9d','10'):
+ if label in ('9b','9c','9d','10','11'):
   assert certificate=='2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2',f'STOP: stage{label} signer is not the required existing certificate'
-  reference_sha={'9b':'3937ac256d611aad0829a767763ebbc154c33aa6a07b8e92909128f7f9b33be6','9c':'1f7c0c0f4e6b3654127dbbbcdedd6422c1ce815c5154cf1bf4a395ef8126de33','9d':'66bd2b942c0ccdf6a76932316fca9e22880af6c24515ad96a5989ea20442fb82','10':'f81fe603fed3774200b10635ebc4308aa4e0e52908f8f8c5bd26a4f8fe29579b'}[label]
-  reference_stage={'9b':'9','9c':'9b','9d':'9c','10':'9d'}[label]
+  reference_sha={'9b':'3937ac256d611aad0829a767763ebbc154c33aa6a07b8e92909128f7f9b33be6','9c':'1f7c0c0f4e6b3654127dbbbcdedd6422c1ce815c5154cf1bf4a395ef8126de33','9d':'66bd2b942c0ccdf6a76932316fca9e22880af6c24515ad96a5989ea20442fb82','10':'f81fe603fed3774200b10635ebc4308aa4e0e52908f8f8c5bd26a4f8fe29579b','11':'81bba42e781720dd6bee4e88c702061ade958806cfc7a35a14fb091dc4411737'}[label]
+  reference_stage={'9b':'9','9c':'9b','9d':'9c','10':'9d','11':'10'}[label]
   assert hashlib.sha256(arguments.previous_apk.read_bytes()).hexdigest()==reference_sha,f'Reference must be the delivered stage{reference_stage} APK'
 alignment=run(bt/'zipalign','-c','-P','16','-v','4',apk)
 assert 'Verification successful' in alignment or 'Verification succesful' in alignment # BuildTools35 spelling

@@ -1,0 +1,9 @@
+{
+  "exitCode": 0,
+  "command": [
+    ":app:compileDebugUnitTestKotlin",
+    ":playback:compileDebugUnitTestKotlin",
+    ":core:compileTestKotlin"
+  ],
+  "afterWritingTestsBeforeGate": true
+}

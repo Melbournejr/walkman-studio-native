@@ -9,7 +9,7 @@ android {
     compileSdk = 36
     ndkVersion = "30.0.16248370"
     buildToolsVersion = "35.0.0"
-    defaultConfig { applicationId = "com.walkmanstudio.nativeplayer"; minSdk = 26; targetSdk = 35; ndk { abiFilters += listOf("arm64-v8a", "x86_64") }; versionCode = 106; versionName = "1.3.0-native-ota" }
+    defaultConfig { applicationId = "com.walkmanstudio.nativeplayer"; minSdk = 26; targetSdk = 35; ndk { abiFilters += listOf("arm64-v8a", "x86_64") }; versionCode = 107; versionName = "1.3.1-native-usb" }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     testOptions { unitTests.isIncludeAndroidResources = true }

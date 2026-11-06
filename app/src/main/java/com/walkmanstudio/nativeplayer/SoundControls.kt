@@ -30,7 +30,9 @@ fun SignalAndDsp(model: PlaybackViewModel) {
         CassetteSignal.chips(signal,config.sourceDirect,!config.sourceDirect).forEach { chip ->
             Text(chip,fontSize=14.sp)
         }
-        Text("Android có thể trộn hoặc đổi tần số sau ngõ ra ứng dụng. Chưa xác định tần số DAC hoặc codec Bluetooth; Source Direct không bảo đảm bit-perfect.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Android có thể trộn hoặc đổi tần số sau ngõ ra ứng dụng. Chưa đo tín hiệu điện tại DAC hoặc codec Bluetooth.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        val usb by model.usb.collectAsStateWithLifecycle()
+        if(usb.connected) Text(usb.reason,fontSize=13.sp)
         if(!config.sourceDirect) Text("DSP qua PCM16 · Gain ${String.format(Locale.ROOT,"%.1f",signal.gainDb)} dB · ${signal.clipped} mẫu chạm ngưỡng",fontSize=13.sp)
         val dsdGain by model.dsdGainDb.collectAsStateWithLifecycle()
         if(dsdGain>0) Text("DSD +$dsdGain dB · ${signal.dsdOverFullScaleSamples} mẫu-kênh giải mã vượt 0 dBFS (kể cả bộ đệm/tua lại)",fontSize=13.sp)

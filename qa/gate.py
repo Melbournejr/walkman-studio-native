@@ -3,7 +3,7 @@
 from pathlib import Path
 import json,os,subprocess,sys,time
 root=Path(__file__).resolve().parents[1]
-label=sys.argv[1]; stage=9 if label in ('9b','9c','9d') else int(label); assert 2<=stage<=10
+label=sys.argv[1]; stage=9 if label in ('9b','9c','9d') else int(label); assert 2<=stage<=11
 modules=['core','library','playback','app']
 variant='Review' if stage==2 else 'Release' if stage>=7 else 'Debug'
 library_variant='Release' if stage==2 or stage>=7 else 'Debug'

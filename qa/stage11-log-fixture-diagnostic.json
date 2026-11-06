@@ -1,0 +1,13 @@
+{
+  "fixtureTestsPassed": 4,
+  "productionLoggerGuardAddedForTest": false,
+  "assertionsPreserved": true,
+  "trace": "log_fixture: currentFilesDir=/tmp/robolectric-UsbAudioRouteTest_structuredRouteAndDecoderEventsSurviveExportBufferWithoutTruncation7074693690594636209/com.walkmanstudio.nativeplayer.playback.test-dataDir/files; retainedFile=/tmp/robolectric-PlaybackTest_lifecycleLogIsBoundedValidJsonAndPersistedOffMain10895516567392018141/com.walkmanstudio.nativeplayer.playback.test-dataDir/files/playback-events.jsonl; sameDirectory=false\nlog_fixture: currentFilesDir=/tmp/robolectric-UsbAudioRouteTest_decoderLogDistinguishesSource24FromDecoder16WithoutChangingFormat6502304423110834124/com.walkmanstudio.nativeplayer.playback.test-dataDir/files; retainedFile=null; sameDirectory=false\nlog_fixture: currentFilesDir=/tmp/robolectric-UsbAudioRouteTest_flacStreamInfoReportsSourceBitDepthAndMalformedHeadersStayUnknown14754243216980838071/com.walkmanstudio.nativeplayer.playback.test-dataDir/files; retainedFile=null; sameDirectory=false\nlog_fixture: currentFilesDir=/tmp/robolectric-UsbAudioRouteTest_routeMeasuresActualTrackAndCleansUpUnsupportedHostWithoutEnabling15212312004842957854/com.walkmanstudio.nativeplayer.playback.test-dataDir/files; retainedFile=null; sameDirectory=false\n",
+  "conclusion": "The isolated fixture passes and verifies ownership/termination. All new retainedFile traces are null, so a stale singleton was not demonstrated as the original cause.",
+  "fixtureChanges": [
+    "Create logger for each Robolectric Application",
+    "Assert current log directory equals Application.filesDir",
+    "Flush, shut down and join writer before test directory teardown",
+    "Clear test process singleton in setup/teardown only"
+  ]
+}

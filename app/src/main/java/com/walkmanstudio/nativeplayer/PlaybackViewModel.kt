@@ -34,9 +34,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class SignalUi(val source:String="Chưa có nguồn",val decoded:String="Chưa có PCM",val output:String="AudioTrack chưa được tạo",val decoder:String="",val gainDb:Double=0.0,val clipped:Long=0,val dsdOverFullScaleSamples:Long=0,
+data class SignalUi(val source:String="Chưa có nguồn",val decoded:String="Chưa có PCM",val output:String="Chưa đo được ngõ ra",val decoder:String="",val gainDb:Double=0.0,val clipped:Long=0,val dsdOverFullScaleSamples:Long=0,
     val sourceMime:String?=null,val sourceRate:Int?=null,val sourcePcmEncoding:Int?=null,
-    val averageBitrate:Int?=null,val peakBitrate:Int?=null,val sourceDsdMultiplier:Int?=null)
+    val averageBitrate:Int?=null,val peakBitrate:Int?=null,val sourceDsdMultiplier:Int?=null,val usbStatus:String?=null)
+
+data class UsbSettingsUi(val available:Boolean=false,val requested:Boolean=false,val verified:Boolean=false,
+    val connected:Boolean=false,val warningAccepted:Boolean=false,val reason:String="Đang chờ thông tin thiết bị")
 
 data class PlaybackUi(
     val connected: Boolean = false, val id: String? = null, val title: String = "",
@@ -61,6 +64,7 @@ class PlaybackViewModel(context: Context) : ViewModel() {
     val dsp = MutableStateFlow(DspSettings.read(app))
     val dsdGainDb = MutableStateFlow(DsdLevelSettings.read(app))
     val signal = MutableStateFlow(SignalUi())
+    val usb = MutableStateFlow(UsbSettingsUi())
     private val currentId = MutableStateFlow<Long?>(null)
     val currentTrack = currentId.flatMapLatest { id -> if (id == null) flowOf(null) else LibraryDatabase.getInstance(app).libraryDao().observeTrack(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -71,7 +75,12 @@ class PlaybackViewModel(context: Context) : ViewModel() {
     init { viewModelScope.launch { while (true) { delay(500); publish() } } }
     fun connect() {
         if (future != null) return
-        val connecting = MediaController.Builder(app, SessionToken(app, ComponentName(app, PlaybackService::class.java))).buildAsync()
+        val connecting = MediaController.Builder(app, SessionToken(app, ComponentName(app, PlaybackService::class.java)))
+            .setListener(object: MediaController.Listener {
+                override fun onDisconnected(controller: MediaController) {
+                    if(this@PlaybackViewModel.controller === controller) disconnect()
+                }
+            }).buildAsync()
         future = connecting
         connecting.addListener({
             if (future !== connecting) return@addListener
@@ -79,6 +88,7 @@ class PlaybackViewModel(context: Context) : ViewModel() {
                 controller = connecting.get().also { it.addListener(listener) }
                 publish(); queue.value = (0 until controller!!.mediaItemCount).map(controller!!::getMediaItemAt); pending?.invoke(); pending = null
             } catch (_: Exception) {
+                invalidateUsbConfirmation()
                 future = null; mutable.value = mutable.value.copy(connected = false, error = "Chưa kết nối được trình phát.")
             }
         }, ContextCompat.getMainExecutor(app))
@@ -86,20 +96,25 @@ class PlaybackViewModel(context: Context) : ViewModel() {
     fun disconnect() {
         controller?.removeListener(listener); controller = null
         future?.let { MediaController.releaseFuture(it) }; future = null
+        invalidateUsbConfirmation()
         mutable.value = mutable.value.copy(connected = false)
     }
     private fun publish() {
         val player = controller ?: return
+        if(!player.isConnected) {invalidateUsbConfirmation();return}
         val extra=player.sessionExtras
         if(extra.containsKey("dsp")) dsp.value=DspSettings.decode(extra.getString("dsp"))
         if(extra.containsKey("dsdGainDb")) dsdGainDb.value=extra.getInt("dsdGainDb")
+        usb.value=UsbSettingsUi(extra.getBoolean("usbAvailable"),extra.getBoolean("usbRequested"),extra.getBoolean("usbVerified"),
+            extra.getBoolean("usbConnected"),extra.getBoolean("usbWarningAccepted"),extra.getString("usbReason") ?: "Đang chờ thông tin thiết bị")
         // Read only the currently selected audio Format. The service remains the sole player owner.
         val format=player.currentTracks.groups.asSequence().filter { it.type==C.TRACK_TYPE_AUDIO }
             .flatMap { group -> (0 until group.length).asSequence().filter(group::isTrackSelected).map(group::getTrackFormat) }.firstOrNull()?.takeIf { player.playbackState != Player.STATE_IDLE }
         signal.value=SignalUi(extra.getString("source").orEmpty(),extra.getString("decoded").orEmpty(),if(format!=null) extra.getString("output").orEmpty() else "",extra.getString("decoder").orEmpty(),extra.getDouble("gainDb"),extra.getLong("clipped"),extra.getLong("dsdOverFullScaleSamples"),
             sourceMime=format?.sampleMimeType,sourceRate=format?.sampleRate?.takeIf { it>0 },sourcePcmEncoding=format?.pcmEncoding,
             averageBitrate=format?.averageBitrate?.takeIf { it>0 },peakBitrate=format?.peakBitrate?.takeIf { it>0 },
-            sourceDsdMultiplier=format?.let { CassetteSignal.dsdMultiplier(it.id,it.sampleMimeType,it.labels.map { label -> label.value }) })
+            sourceDsdMultiplier=format?.let { CassetteSignal.dsdMultiplier(it.id,it.sampleMimeType,it.labels.map { label -> label.value }) },
+            usbStatus=if(usb.value.connected) if(usb.value.verified) "Bit-perfect USB" else "USB · Mixer hệ thống" else null)
         val error = player.playerError
         val id = player.currentMediaItem?.mediaId
         currentId.value = id?.toLongOrNull()
@@ -122,6 +137,10 @@ class PlaybackViewModel(context: Context) : ViewModel() {
             shuffled=player.shuffleModeEnabled)
     }
     fun play(track: TrackEntity, filter: TrackFilter = TrackFilter(rootId = track.rootId)) = playSelection(filter, track.id)
+    private fun invalidateUsbConfirmation() {
+        usb.value=UsbSettingsUi(reason="Chưa kết nối trình phát")
+        signal.value=signal.value.copy(usbStatus=null)
+    }
     fun playSelection(filter: TrackFilter, anchor: Long = 0, shuffle: Boolean = false) {
         if (controller == null) { pending = { playSelection(filter, anchor, shuffle) }; connect(); return }
         val selected = if (shuffle) filter.copy(shuffleSeed = kotlin.random.Random.nextInt(1, Int.MAX_VALUE)) else filter.copy(shuffleSeed = null)
@@ -159,6 +178,10 @@ class PlaybackViewModel(context: Context) : ViewModel() {
         send(PlaybackCommands.DSD_LEVEL, Bundle().apply { putInt("gainDb", db) })
     }
     fun previous() { controller?.seekToPreviousMediaItem() }
+    fun setUsbOutput(enabled:Boolean, warningAccepted:Boolean) {
+        if(controller==null) {pending={setUsbOutput(enabled,warningAccepted)};connect();return}
+        send(PlaybackCommands.USB_OUTPUT,Bundle().apply{putBoolean("enabled",enabled);putBoolean("warningAccepted",warningAccepted)})
+    }
     fun next() { controller?.seekToNextMediaItem() }
     fun seek(positionMs: Long) {
         val player = controller ?: return

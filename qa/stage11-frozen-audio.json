@@ -1,0 +1,10 @@
+{
+  "nativeLibrariesIdenticalToStage10": {
+    "lib/arm64-v8a/libwalkman_dsd.so": "9faeed8bcf6ba9a85c392856f5ec4ba76fe52fa2f5b0e291c4123809c246f014",
+    "lib/x86_64/libwalkman_dsd.so": "1b328189056626daf7902eed91677c9ebc5436750526f8668a383397911f4026"
+  },
+  "addedPermissions": [
+    "android.permission.MODIFY_AUDIO_SETTINGS"
+  ],
+  "permissionExceptionApprovedByUser": true
+}

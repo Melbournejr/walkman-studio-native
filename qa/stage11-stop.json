@@ -1,0 +1,44 @@
+{
+  "stage": "11",
+  "status": "RESOLVED: isolated log fixture passes; final gate passes",
+  "branch": "stage11/usb-output",
+  "compileTests": "PASS :app:compileDebugUnitTestKotlin :playback:compileDebugUnitTestKotlin :core:compileTestKotlin",
+  "gate": "FAIL :playback:testDebugUnitTest",
+  "firstError": {
+    "file": "playback/src/test/kotlin/com/walkmanstudio/nativeplayer/playback/UsbAudioRouteTest.kt",
+    "line": 49,
+    "type": "java.io.FileNotFoundException",
+    "detail": "playback-events.jsonl absent in current Robolectric Application.filesDir after LifecycleLog.flush barrier"
+  },
+  "sameFailureAlsoAtLine": 67,
+  "rootCauseStatus": "Observed missing file; singleton retaining another Robolectric Application context is a hypothesis, not instrumented yet. No additional test rerun or fixes after failed gate.",
+  "completedTestModules": {
+    "core": {
+      "tests": 95,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "library": {
+      "tests": 44,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "playback": {
+      "tests": 39,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "appTests": "not run by failed gate; do not count stale XML",
+  "release": "See stage11-apk.json and FINAL-REPORT.md",
+  "notVerified": [
+    "physical AudioManager/OEM",
+    "USB DAC",
+    "Xiaomi Android16",
+    "installation/signature of stage11 (no exported APK)"
+  ],
+  "resolutionEvidence": "stage11-log-fixture-pass.xml and stage11-gate.json"
+}

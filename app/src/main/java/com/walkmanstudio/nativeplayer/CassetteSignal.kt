@@ -49,6 +49,7 @@ object CassetteSignal {
             }
         }
         if(sourceDirect) add("Source Direct") else if(eqEnabled) add("EQ")
+        signal.usbStatus?.let(::add)
     }
 
     private fun pcmName(value:Int?):String? = when(value) {

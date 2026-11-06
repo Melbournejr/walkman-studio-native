@@ -5,6 +5,18 @@ App ID `com.walkmanstudio.nativeplayer`; cài song song với bản WebView cũ.
 targetSdk35, compileSdk36. Từ GĐ10, INTERNET/REQUEST_INSTALL_PACKAGES phục vụ OTA được chủ dự án cho phép; không MediaStore hay MANAGE_EXTERNAL_STORAGE;
 allowBackup=false. Nhạc được đọc từ URI đã cấp, không copy vào app.
 
+## Đo đường ra USB (GĐ11)
+
+Đạt gate host: 298/298 test, build release/review và lint. Bản107 /
+`1.3.1-native-usb`, tag `stage11`; chưa kiểm chứng USB DAC/Xiaomi thật.
+Tải: https://github.com/Melbournejr/walkman-studio-native/releases/tag/stage11
+
+Mặc định tắt; Android14+ cần DAC công bố mixer attributes. Đo AudioTrack thực,
+format decoder, preferred/supported mixer và routedDevice trong log xuất cục bộ.
+Không tự resample; FIR/DSD/EQ giữ nguyên. Quyền normal MODIFY_AUDIO_SETTINGS
+được chủ dự án duyệt riêng. Xem [đường ra USB](docs/USB-OUTPUT.md) và
+[báo cáo hiện tại](docs/FINAL-REPORT.md) trước khi thử với DAC/ampli.
+
 ## Cập nhật trong ứng dụng (GĐ10)
 
 **GĐ10 đạt gate host**: 271/271 test, build release/review và lint qua. Bản 106 /

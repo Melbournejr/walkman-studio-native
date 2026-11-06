@@ -17,9 +17,16 @@ class LifecycleLog private constructor(private val context: Context) {
     private val current = File(context.filesDir, "playback-events.jsonl")
     private val previous = File(context.filesDir, "playback-events.previous.jsonl")
     fun record(event: String, detail: String = "") {
-        val line = JSONObject().put("wallTimeMs", System.currentTimeMillis())
+        enqueue(event, JSONObject().put("detail", detail.take(1200)))
+    }
+    /** Structured telemetry must not be truncated in the middle of device capability arrays. */
+    fun record(event: String, fields: JSONObject) = enqueue(event, JSONObject().put("fields", fields))
+    private fun enqueue(event: String, payload: JSONObject) {
+        val entry = JSONObject().put("wallTimeMs", System.currentTimeMillis())
             .put("elapsedMs", SystemClock.elapsedRealtime()).put("pid", Process.myPid())
-            .put("event", event.take(80)).put("detail", detail.take(1200)).toString() + "\n"
+            .put("event", event.take(80))
+        payload.keys().forEach { key -> entry.put(key, payload.get(key)) }
+        val line = entry.toString() + "\n"
         writer.execute {
             try {
                 if (current.length() + line.toByteArray(Charsets.UTF_8).size > MAX_BYTES) {

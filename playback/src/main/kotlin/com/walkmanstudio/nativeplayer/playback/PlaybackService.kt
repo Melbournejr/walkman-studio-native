@@ -65,7 +65,8 @@ class PlaybackService : MediaLibraryService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var dsp: DspState
     private lateinit var dsdLevel: DsdLevelState
-    private var renderRevision=0L
+    private lateinit var usb: UsbAudioRoute
+    @Volatile private var renderRevision=0L
     private var sourceSignal:Format?=null
     private var decodedSignal:Format?=null
     private var outputSignal:AudioSink.AudioTrackConfig?=null
@@ -83,13 +84,14 @@ class PlaybackService : MediaLibraryService() {
     private var catalogEnded = false
     private var stopReason = "system_callback_unknown_initiator"
     private val persistTick = object : Runnable {
-        override fun run() { savePosition();updateSessionExtras(); mainHandler.postDelayed(this, 2_000) }
+        override fun run() { savePosition();usb.refresh("periodic_observation");updateSessionExtras(); mainHandler.postDelayed(this, 2_000) }
     }
     private val playerEvents=object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 log.record("player_state", "state=$playbackState; playWhenReady=${player.playWhenReady}")
                 savePosition()
             }
+            override fun onIsPlayingChanged(isPlaying: Boolean) { if (isPlaying) usb.refresh("playback_started", true) }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 val event = when (reason) {
                     Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS -> "audio_focus_loss"
@@ -103,6 +105,7 @@ class PlaybackService : MediaLibraryService() {
             }
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 log.record("media_transition", "id=${mediaItem?.mediaId}; reason=$reason")
+                usb.transition(mediaItem?.mediaId)
                 savePosition(); observeCurrentMetadata(); appendCatalogWindow()
             }
             override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
@@ -115,9 +118,15 @@ class PlaybackService : MediaLibraryService() {
         }
     private fun buildPlayer():ExoPlayer {
         val revision=++renderRevision
-        val renderers=StudioRenderersFactory(this,dsp) { format -> mainHandler.post {
-            if(revision==renderRevision) { decodedSignal=format;if(format.customData is DsdHeader)decoderName="C++ Kaiser FIR DSD → PCM";updateSessionExtras() }
-        } }
+        val rendererBypassesDsp=dsp.config.get().sourceDirect
+        val renderers=StudioRenderersFactory(this,dsp, decoded = { format ->
+            // Synchronous: choose mixer before the sink creates its AudioTrack.
+            if(revision==renderRevision) usb.decoder(format)
+            mainHandler.post {
+                if(revision==renderRevision) { decodedSignal=format;if(format.customData is DsdHeader)decoderName="C++ Kaiser FIR DSD → PCM";updateSessionExtras() }
+            }
+        }, observedTrack = { if(revision==renderRevision) usb.attached(it,rendererBypassesDsp) },
+            releasedTrack = usb::released, observedVolume = usb::volume)
         val baseExtractors=DefaultExtractorsFactory().setMp3ExtractorFlags(Mp3Extractor.FLAG_ENABLE_INDEX_SEEKING)
         val extractors=ExtractorsFactory { arrayOf<androidx.media3.extractor.Extractor>(DsdExtractor(levelState=dsdLevel) { event,detail -> log.record(event,"$detail; model=${Build.MODEL}; sdk=${Build.VERSION.SDK_INT}; abi=${Build.SUPPORTED_ABIS.firstOrNull()}") }) + baseExtractors.createExtractors() }
         val result=ExoPlayer.Builder(this,renderers)
@@ -130,7 +139,7 @@ class PlaybackService : MediaLibraryService() {
         result.addListener(playerEvents)
         result.addAnalyticsListener(object:AnalyticsListener {
             override fun onAudioInputFormatChanged(eventTime:AnalyticsListener.EventTime,format:Format,decoderReuseEvaluation:DecoderReuseEvaluation?) {
-                if(revision==renderRevision) { sourceSignal=format;updateSessionExtras() }
+                if(revision==renderRevision) { sourceSignal=format;usb.input(format);updateSessionExtras() }
             }
             override fun onAudioDecoderInitialized(eventTime:AnalyticsListener.EventTime,name:String,initializedTimestampMs:Long,initializationDurationMs:Long) {
                 if(revision==renderRevision) { decoderName=name;log.record("audio_decoder",name);updateSessionExtras() }
@@ -167,6 +176,7 @@ class PlaybackService : MediaLibraryService() {
         selection = TrackFilter.decode(PlaybackMemory.preferences(this).getString("selection", null))
         dsp=DspState(DspSettings.read(this))
         dsdLevel=DsdLevelState(DsdLevelSettings.read(this))
+        usb=UsbAudioRoute(this,mainHandler,log,{dsp.config.get().sourceDirect},{dsdLevel.gainDb},{updateSessionExtras()})
         player=buildPlayer()
         val builder = MediaLibrarySession.Builder(this, player, SessionCallback())
         packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
@@ -225,6 +235,7 @@ class PlaybackService : MediaLibraryService() {
         if (::player.isInitialized) {
             savePosition(); log.record("service_destroy", "reason=$stopReason")
             mainHandler.removeCallbacksAndMessages(null)
+            usb.close()
             session?.release(); session = null; player.release()
         }
         metadataWatch?.cancel(); io.cancel()
@@ -289,6 +300,7 @@ class PlaybackService : MediaLibraryService() {
                         .add(PlaybackCommands.command(PlaybackCommands.PLAY_SELECTION))
                         .add(PlaybackCommands.command(PlaybackCommands.SLEEP))
                         .add(PlaybackCommands.command(PlaybackCommands.DSD_LEVEL))
+                        .add(PlaybackCommands.command(PlaybackCommands.USB_OUTPUT))
                         .add(PlaybackCommands.command(PlaybackCommands.DSP)).build()).build()
             else MediaSession.ConnectionResult.reject())
 
@@ -331,6 +343,7 @@ class PlaybackService : MediaLibraryService() {
                     if(raw==null || raw.length>4096) Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE)) else {
                         val config=DspSettings.decode(raw);val previous=dsp.config.getAndSet(config)
                         DspSettings.write(this@PlaybackService,config)
+                        usb.refresh("dsp_changed",true)
                         if(previous.sourceDirect!=config.sourceDirect) rebuildForDspRoute()
                         log.record("dsp_config","sourceDirect=${config.sourceDirect}; replayGain=${config.replayGain}; dither=${config.dither}")
                         updateSessionExtras();Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -340,11 +353,17 @@ class PlaybackService : MediaLibraryService() {
                     val gain = args.getInt("gainDb", -1)
                     if (gain !in DsdLevelState.ALLOWED_GAINS_DB) Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE)) else {
                         dsdLevel.setGainDb(gain)
+                        usb.refresh("dsd_gain_changed",true)
                         DsdLevelSettings.write(this@PlaybackService, gain)
                         log.record("dsd_level", "gainDb=$gain; appliesTo=next_decoded_DSD_blocks; buffered_audio_may_retain_previous_gain")
                         updateSessionExtras()
                         Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                     }
+                }
+                PlaybackCommands.USB_OUTPUT -> {
+                    val accepted = usb.setEnabled(args.getBoolean("enabled"),args.getBoolean("warningAccepted"))
+                    updateSessionExtras()
+                    Futures.immediateFuture(SessionResult(if(accepted) SessionResult.RESULT_SUCCESS else SessionError.ERROR_BAD_VALUE))
                 }
                 PlaybackCommands.SLEEP -> {
                     val minutes = args.getInt("minutes", 0)
@@ -378,6 +397,13 @@ class PlaybackService : MediaLibraryService() {
     private fun updateSessionExtras() {
         session?.setSessionExtras(Bundle().apply {
             putLong("sleepAt",sleepAt)
+            if(::usb.isInitialized) {
+                val status=usb.status
+                putBoolean("usbAvailable",status.available);putBoolean("usbRequested",status.requested)
+                putBoolean("usbVerified",status.verified);putString("usbReason",status.reason)
+                putBoolean("usbConnected",usb.usbConnected)
+                putBoolean("usbWarningAccepted",usb.warningAccepted())
+            }
             if(::dsp.isInitialized) {
                 putString("dsp",DspSettings.encode(dsp.config.get()));putDouble("gainDb",dsp.appliedGainDb);putLong("clipped",dsp.clippedSamples)
             }
@@ -388,7 +414,7 @@ class PlaybackService : MediaLibraryService() {
             putString("source",sourceSignal?.let { format -> (format.customData as? DsdHeader)?.let { "DSD${it.sampleRate/44100} · ${it.sampleRate} Hz · ${it.channels} kênh · 1bit" } ?: describeFormat(format) } ?: "Chưa có dữ liệu từ renderer")
             putString("decoded",decodedSignal?.let(::describeFormat) ?: "Chưa có PCM sau giải mã")
             putString("decoder",decoderName)
-            putString("output",outputSignal?.let { "${pcmName(it.encoding)} · ${it.sampleRate} Hz · ${Integer.bitCount(it.channelConfig)} kênh · offload=${it.offload}" } ?: "AudioTrack chưa được tạo")
+            putString("output",usb.outputDescription() ?: "Chưa đo được ngõ ra")
         })
     }
 

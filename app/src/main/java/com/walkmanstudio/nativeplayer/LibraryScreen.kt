@@ -120,6 +120,7 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                                 }
                             }
                             Stage8AudioSettings(playback)
+                            UsbOutputSettings(playback)
                             com.walkmanstudio.nativeplayer.update.UpdateSettings(updates)
                             Text("Phiên bản ${BuildConfig.VERSION_NAME}",style=MaterialTheme.typography.bodyMedium)
                             Text("MP3 / FLAC / WAV / AAC / Ogg: decoder thiết bị. DSF / DFF không nén DSD64–256 → PCM88,2kHz. Chưa hỗ trợ DST, DSD512, SACD ISO, DoP.",style=MaterialTheme.typography.bodyMedium)

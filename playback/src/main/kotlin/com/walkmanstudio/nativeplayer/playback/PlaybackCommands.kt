@@ -11,5 +11,6 @@ object PlaybackCommands {
     const val DSP = "walkman.dsp"
     const val DSD_LEVEL = "walkman.dsd_level"
     const val SLEEP = "walkman.sleep"
+    const val USB_OUTPUT = "walkman.usb_output"
     fun command(action: String) = SessionCommand(action, Bundle.EMPTY)
 }
