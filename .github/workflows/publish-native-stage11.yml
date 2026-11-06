@@ -1,0 +1,156 @@
+name: Publish verified native OTA APK
+on:
+  push:
+    branches: [main]
+    paths: [distribution/stage11/READY.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publish-native-stage11
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify original APK, publish source snapshot and OTA release
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          import base64
+          import concurrent.futures
+          import hashlib
+          import io
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import re
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          import zipfile
+          
+          repository=os.environ['GITHUB_REPOSITORY']
+          assert repository=='Melbournejr/walkman-studio-native'
+          revision=os.environ['GITHUB_SHA']
+          token=os.environ['GH_TOKEN']
+          base='https://api.github.com/repos/'+repository
+          expected_apk='0771ab03c70cc6b63544008933fda3079cfc04514769192bc10140b1e97423da'
+          expected_source='0af45979b40e2061ec915f1f936ef6aef867ac1ae5d21c6bed0a08b8c9f1cb9f'
+          pin='2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2'
+          
+          def api(method,url,data=None,content_type='application/json'):
+              assert urllib.parse.urlparse(url).hostname in {'api.github.com','uploads.github.com'}
+              payload=json.dumps(data).encode() if isinstance(data,dict) else data
+              request=urllib.request.Request(url,data=payload,method=method,headers={
+                  'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json',
+                  'Content-Type':content_type,'X-GitHub-Api-Version':'2022-11-28',
+                  'User-Agent':'walkman-native-artifact-publisher'})
+              with urllib.request.urlopen(request,timeout=60) as response:return json.load(response)
+          
+          def contents(path):
+              assert path.startswith('distribution/stage11/') and '..' not in path.split('/')
+              record=api('GET',base+'/contents/'+urllib.parse.quote(path,safe='/')+'?ref='+revision)
+              assert record['encoding']=='base64'
+              return base64.b64decode(record['content'])
+          
+          manifest=json.loads(contents('distribution/stage11/READY.json'))
+          assert manifest['versionCode']==107 and manifest['certificateSha256']==pin and manifest['testCount']>=298
+          assert {f['name'] for f in manifest['files']}=={'walkman-native-stage11.apk','walkman-native-stage11-code.zip'}
+          output=Path(os.environ['RUNNER_TEMP'])/'walkman-native-stage11'
+          output.mkdir(exist_ok=True)
+          checksums=[]
+          
+          def part(record):
+              assert re.fullmatch(r'(apk|source)-\d{3}\.b64',record['name'])
+              body=contents('distribution/stage11/parts/'+record['name'])
+              assert hashlib.sha256(body).hexdigest()==record['sha256']
+              return body
+          
+          for record in manifest['files']:
+              with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:encoded=b''.join(pool.map(part,record['parts']))
+              body=base64.b64decode(encoded,validate=True);digest=hashlib.sha256(body).hexdigest()
+              assert len(body)==record['bytes'] and digest==record['sha256']
+              assert digest==(expected_apk if record['name'].endswith('.apk') else expected_source)
+              (output/record['name']).write_bytes(body)
+              checksums.append(digest+'  '+record['name'])
+              print('Verified',record['name'],len(body),digest,flush=True)
+          
+          update=manifest['update']
+          assert update['schema']==1 and update['versionCode']==107 and update['versionName']=='1.3.1-native-usb'
+          assert update['sha256']==expected_apk and update['certificateSha256']==pin and update['minSdk']==26
+          assert update['bytes']==(output/'walkman-native-stage11.apk').stat().st_size
+          assert update['url']=='https://github.com/'+repository+'/releases/download/stage11/walkman-native-stage11.apk'
+          (output/'update.json').write_text(json.dumps(update,ensure_ascii=False,indent=2)+'\n')
+          checksums.append(hashlib.sha256((output/'update.json').read_bytes()).hexdigest()+'  update.json')
+          (output/'SHA256SUMS').write_text('\n'.join(checksums)+'\n')
+          (output/'SIGNATURE.txt').write_text(manifest['signature'])
+          (output/'signing-certificate.pem').write_text(manifest['certificatePem'])
+          pem=manifest['certificatePem']
+          assert hashlib.sha256(base64.b64decode(''.join(pem.splitlines()[1:-1]))).hexdigest()==pin
+          
+          releases=[r for r in api('GET',base+'/releases?per_page=100') if r['tag_name']=='stage11']
+          assert len(releases)<=1
+          assert not releases or releases[0]['draft'], 'Published release exists; inspect instead of replacing it.'
+          
+          if releases:
+              release=releases[0]
+          else:
+              # Publish corresponding program sources on a browsable native branch. No build,
+              # signing operation or private key is performed/published on GitHub.
+              entries=[]
+              with zipfile.ZipFile(output/'walkman-native-stage11-code.zip') as archive:
+                  for item in archive.infolist():
+                      if item.is_dir():continue
+                      assert item.filename.startswith('walkman-studio-native/')
+                      name=item.filename.removeprefix('walkman-studio-native/')
+                      parts=PurePosixPath(name).parts
+                      assert name and not name.startswith('/') and '..' not in parts and '.git' not in parts
+                      assert not name.lower().endswith(('.keystore','.jks','.p12','local.properties'))
+                      data=archive.read(item)
+                      entry={'path':name,'type':'blob','mode':'100755' if (item.external_attr>>16)&0o111 else '100644'}
+                      try:
+                          text=data.decode('utf-8')
+                          if '\0' in text:raise UnicodeError('binary')
+                          entry['content']=text
+                      except UnicodeError:
+                          entry['sha']=api('POST',base+'/git/blobs',{'content':base64.b64encode(data).decode(),'encoding':'base64'})['sha']
+                      entries.append(entry)
+              tree=api('POST',base+'/git/trees',{'tree':entries})
+              assert not tree.get('truncated',False)
+              parent=None
+              try:parent=api('GET',base+'/git/ref/heads/native')['object']['sha']
+              except urllib.error.HTTPError as error:
+                  if error.code!=404:raise
+              author={'name':'github-actions[bot]','email':'41898282+github-actions[bot]@users.noreply.github.com'}
+              source=api('POST',base+'/git/commits',{'message':'Verified native stage11 sources from '+manifest['nativeCommit'],
+                  'tree':tree['sha'],'parents':[parent] if parent else [],'author':author,'committer':author})['sha']
+              if parent:api('PATCH',base+'/git/refs/heads/native',{'sha':source,'force':False})
+              else:api('POST',base+'/git/refs',{'ref':'refs/heads/native','sha':source})
+              print('Native sources:',source,flush=True)
+              release=api('POST',base+'/releases',{'tag_name':'stage11','target_commitish':source,'draft':True,
+                  'name':'Walkman Studio Native 1.3.1 — Đường ra USB DAC',
+                  'body':'Đo AudioTrack và PCM từ decoder; mixer USB Android14+ mặc định tắt, cảnh báo âm lượng lần đầu. '
+                         'VersionCode 107; chứng chỉ cũ. Build/lint và '+str(manifest['testCount'])+' test qua trên máy chủ; chưa kiểm chứng DAC hoặc Xiaomi thật. '
+                         'Giữ nguyên FIR DSD/EQ, không DoP, không tự resample. Ngoại lệ quyền MODIFY_AUDIO_SETTINGS đã được chủ dự án chấp thuận. '
+                         'APK giữ nguyên byte và chữ ký; source GPL ở tag stage11/code.zip. Bản106 nhận update.json qua OTA; Android vẫn yêu cầu xác nhận cài.'})
+          
+          upload=release['upload_url'].split('{',1)[0]
+          existing={a['name']:a for a in release['assets']}
+          for file in sorted(output.iterdir()):
+              digest='sha256:'+hashlib.sha256(file.read_bytes()).hexdigest()
+              if file.name in existing:
+                  assert existing[file.name]['size']==file.stat().st_size and existing[file.name].get('digest')==digest
+                  continue
+              asset=api('POST',upload+'?name='+urllib.parse.quote(file.name),file.read_bytes(),'application/octet-stream')
+              assert asset['size']==file.stat().st_size
+              if asset.get('digest'):assert asset['digest']==digest
+              print('Uploaded',asset['name'],flush=True)
+          published=api('PATCH',base+'/releases/'+str(release['id']),{'draft':False})
+          assert not published['draft'] and len(published['assets'])==6
+          print('Published:',published['html_url'],flush=True)
+          for asset in published['assets']:print(asset['browser_download_url'],flush=True)
+          PYTHON
