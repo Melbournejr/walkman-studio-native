@@ -1,0 +1,9 @@
+Walkman Studio Native
+Copyright (C) 2026 Walkman Studio Native contributors
+Project-authored source licensed GPL-3.0-or-later.
+
+Stage 1 contains newly authored Kotlin/Compose code. No FFmpeg, DSD decoder,
+WebView/WASM, firmware, or demo music is embedded in this phase.
+Planned stage 6 GPL DSD port: Walkman Studio 1.1.1 shared-web/dsd-format.js and
+shared-web/dsd-worker.js. Keep notices and original revision when porting.
+Third-party dependencies retain their own license terms.

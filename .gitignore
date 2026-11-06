@@ -1,0 +1,17 @@
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+*.jks
+*.keystore
+*.p12
+qa/*.log
+qa/bootstrap-cloud.py
+qa/cloud-gradle.py
+.kotlin/
+
+**/.cxx/
+
+__pycache__/
+*.pyc
