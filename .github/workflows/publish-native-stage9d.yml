@@ -1,0 +1,106 @@
+name: Publish verified native APK
+on:
+  push:
+    branches: [main]
+    paths: [distribution/stage9d/READY.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publish-native-stage9d
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Assemble byte-exact APK, verify SHA-256 and publish release
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          import base64
+          import concurrent.futures
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import urllib.parse
+          import urllib.request
+          
+          repository = os.environ['GITHUB_REPOSITORY']
+          revision = os.environ['GITHUB_SHA']
+          token = os.environ['GH_TOKEN']
+          base = 'https://api.github.com/repos/' + repository
+          expected_apk = 'f81fe603fed3774200b10635ebc4308aa4e0e52908f8f8c5bd26a4f8fe29579b'
+          
+          def api(method, url, data=None, content_type='application/json'):
+              assert urllib.parse.urlparse(url).hostname in {'api.github.com', 'uploads.github.com'}
+              body = json.dumps(data).encode() if isinstance(data, dict) else data
+              request = urllib.request.Request(url, data=body, method=method, headers={
+                  'Authorization': 'Bearer ' + token,
+                  'Accept': 'application/vnd.github+json',
+                  'Content-Type': content_type,
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  'User-Agent': 'walkman-native-artifact-publisher',
+              })
+              with urllib.request.urlopen(request, timeout=60) as response:
+                  return json.load(response)
+          
+          def contents(path):
+              assert path.startswith('distribution/stage9d/') and '..' not in path.split('/')
+              url = base + '/contents/' + urllib.parse.quote(path, safe='/') + '?ref=' + revision
+              record = api('GET', url)
+              assert record['encoding'] == 'base64'
+              return base64.b64decode(record['content'])
+          
+          manifest = json.loads(contents('distribution/stage9d/READY.json'))
+          assert manifest['versionCode'] == 105
+          assert manifest['certificateSha256'] == '2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2'
+          assert {f['name'] for f in manifest['files']} == {'walkman-native-stage9d.apk', 'walkman-native-stage9d-code.zip'}
+          output = Path(os.environ['RUNNER_TEMP']) / 'walkman-native-stage9d'
+          output.mkdir(exist_ok=True)
+          checksums = []
+          
+          def part(record):
+              body = contents(record['path'])
+              assert hashlib.sha256(body).hexdigest() == record['sha256'], record['path']
+              return body
+          
+          for record in manifest['files']:
+              with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+                  encoded = b''.join(pool.map(part, record['parts']))
+              body = base64.b64decode(encoded, validate=True)
+              digest = hashlib.sha256(body).hexdigest()
+              assert len(body) == record['bytes'] and digest == record['sha256']
+              if record['name'].endswith('.apk'):
+                  assert digest == expected_apk and body.startswith(b'PK')
+              (output / record['name']).write_bytes(body)
+              checksums.append(digest + '  ' + record['name'])
+              print('Verified', record['name'], len(body), digest, flush=True)
+          
+          (output / 'SHA256SUMS').write_text('\n'.join(checksums) + '\n')
+          (output / 'SIGNATURE.txt').write_text(manifest['signature'])
+          (output / 'signing-certificate.pem').write_text(manifest['certificatePem'])
+          assert not any(r['tag_name'] == 'stage9d' for r in api('GET', base + '/releases?per_page=100')), 'Release already exists; inspect it instead of replacing it.'
+          release = api('POST', base + '/releases', {
+              'tag_name': 'stage9d', 'target_commitish': revision, 'draft': True,
+              'name': 'Walkman Studio Native 1.2.3 — Cassette ngang',
+              'body': 'Cassette ngang phủ toàn chiều rộng; tên bài, thông số và phím bên dưới. '
+                      'VersionCode 105. APK giữ nguyên chữ ký đã xác minh, SHA-256: `' + expected_apk + '`. '
+                      'Build/lint và 221/221 test đã qua trên máy chủ; chưa thử Xiaomi thật. '
+                      'Mã nguồn tương ứng GPL-3.0-or-later được đính kèm. Không build hoặc ký lại APK trong workflow này.',
+          })
+          upload = release['upload_url'].split('{', 1)[0]
+          for file in sorted(output.iterdir()):
+              asset = api('POST', upload + '?name=' + urllib.parse.quote(file.name), file.read_bytes(), 'application/octet-stream')
+              assert asset['size'] == file.stat().st_size
+              if asset.get('digest'):
+                  assert asset['digest'] == 'sha256:' + hashlib.sha256(file.read_bytes()).hexdigest()
+              print('Uploaded', asset['name'], flush=True)
+          published = api('PATCH', base + '/releases/' + str(release['id']), {'draft': False})
+          print('Published:', published['html_url'], flush=True)
+          for asset in published['assets']:
+              print(asset['browser_download_url'], flush=True)
+          PYTHON
