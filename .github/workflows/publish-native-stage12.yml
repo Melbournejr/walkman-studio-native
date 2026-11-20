@@ -1,0 +1,36 @@
+name: Publish Walkman Studio Native Stage 12
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-native-stage12
+
+jobs:
+  publish:
+    # The distribution files and workflow must reach main through normal review.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reconstruct and verify the signed OTA assets
+        run: |
+          tools="$ANDROID_HOME/build-tools/35.0.0"
+          if [ ! -x "$tools/apksigner" ]; then sdkmanager 'build-tools;35.0.0'; fi
+          python3 qa/verify-audio-engine-distribution.py "$tools" "$RUNNER_TEMP/stage12"
+      - name: Publish the reviewed release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          assets="$RUNNER_TEMP/stage12"
+          source_commit="$(git rev-parse HEAD)"
+          gh release create stage12 "$assets"/* --target "$source_commit" --draft \
+            --title 'Walkman Studio Native 1.4.0 — Audio engine' \
+            --notes 'Version 108. High-resolution PCM DSP, EQ transitions and observed audio routing.'
+          gh release edit stage12 --draft=false --latest
