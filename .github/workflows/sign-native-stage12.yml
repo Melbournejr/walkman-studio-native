@@ -6,6 +6,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: sign-native-stage12
 
@@ -66,6 +70,7 @@ jobs:
           keystore="$(mktemp "$RUNNER_TEMP/walkman-keystore.XXXXXXXX")"
           trap 'rm -f -- "$keystore"' EXIT
           printf '%s' "$WALKMAN_SIGNING_KEYSTORE_B64" | base64 --decode > "$keystore"
+          unset WALKMAN_SIGNING_KEYSTORE_B64
           expected=2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2
           certificate="$(keytool -exportcert -keystore "$keystore" \
             -alias "$WALKMAN_SIGNING_KEY_ALIAS" -storepass:env WALKMAN_SIGNING_STORE_PASSWORD | sha256sum)"

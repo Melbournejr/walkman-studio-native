@@ -84,4 +84,6 @@ An owner can configure the GitHub Actions environment `stage12-signing` for revi
 | `WALKMAN_SIGNING_KEY_ALIAS` | Alias of the Stage 11 signing entry |
 | `WALKMAN_SIGNING_KEY_PASSWORD` | Password of that signing entry |
 
-After source review, dispatch **Build and sign Walkman Studio Native Stage 12** on `main`. The build job runs without signing secrets. The signing job validates the candidate against the exact published Stage 11 APK and uploads the staged distribution only after verification. Submit that generated distribution through normal review before dispatching **Publish Walkman Studio Native Stage 12**. The signing job has read-only repository access.
+If the existing signing custodian already has an authorized signing system, they can instead return the signed release APK for the local staging command above. This permits signature validation before the source merge without transferring the key.
+
+Once the workflow exists on reviewed `main`, dispatch **Build and sign Walkman Studio Native Stage 12** on `main`. The build job runs without signing secrets. The signing job validates the candidate against the exact published Stage 11 APK and uploads the staged distribution only after verification. Submit that generated distribution through normal review before dispatching **Publish Walkman Studio Native Stage 12**. The signing job has read-only repository access.
