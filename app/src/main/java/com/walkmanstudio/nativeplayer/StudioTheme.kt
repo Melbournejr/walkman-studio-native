@@ -38,13 +38,13 @@ val StudioDark = darkColorScheme(
     primaryContainer = Color(0xFF423321), onPrimaryContainer = Color(0xFFF0D8B2),
     secondary = Color(0xFFB8C5D3), onSecondary = Color(0xFF232E3A),
     secondaryContainer = Color(0xFF2B3642), onSecondaryContainer = Color(0xFFD9E4EF),
-    background = Color(0xFF0B0F14), onBackground = Color(0xFFF5F6F7),
-    surface = Color(0xFF0B0F14), onSurface = Color(0xFFF5F6F7),
-    surfaceVariant = Color(0xFF29333E), onSurfaceVariant = Color(0xFFA9B4C2),
+    background = Color(0xFF0B0F14), onBackground = Color(0xFFF5F1E9),
+    surface = Color(0xFF0B0F14), onSurface = Color(0xFFF5F1E9),
+    surfaceVariant = Color(0xFF29333E), onSurfaceVariant = Color(0xFFA6ADB7),
     surfaceContainerLowest = Color(0xFF0D1117), surfaceContainerLow = Color(0xFF151B24),
     surfaceContainer = Color(0xFF1A222C), surfaceContainerHigh = Color(0xFF232B35),
     surfaceContainerHighest = Color(0xFF303A45),
-    outline = Color(0xFF8B98A8), outlineVariant = Color(0xFF39434F),
+    outline = Color(0xFF8B98A8), outlineVariant = Color(0xFF38404A),
 )
 
 private val baseTypography = Typography()

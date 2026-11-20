@@ -100,7 +100,7 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                         inCollection -> model::back
                         else -> null
                     }
-                    MioHeader(title, back = back) {
+                    MioHeader(title, back = back, editorial = tab == "library" && !inCollection) {
                         if (tab in setOf("library", "folders", "favorites")) {
                             if (!inCollection) IconButton(onClick = { model.selectTab("library"); model.browse("songs") }) {
                                 StudioIcon(R.drawable.ic_mio_search, "Tìm bài hát")
@@ -154,7 +154,7 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                                     Box(modifier) {
                                         val index = row * 2 + column
                                         if (index < albums.itemCount) albums[index]?.let { album ->
-                                            MioAlbumTile(album.album, album.artist, { model.openAlbum(album) }) { cover ->
+                                            MioAlbumTile(album.album, album.artist, { model.openAlbum(album) }, leadRow = row == 0) { cover ->
                                                 AlbumCover(album.coverKey, "${album.artist}|${album.album}", cover, large = true)
                                             }
                                         }
@@ -241,7 +241,7 @@ internal fun MioLibraryTabs(active: String, select: (String) -> Unit) {
 
 @Composable
 internal fun MioAlbumRow(tile: @Composable (Int, Modifier) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = MioSpacing.gutter, vertical = 8.dp),
+    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 5.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         repeat(2) { tile(it, Modifier.weight(1f)) }
     }

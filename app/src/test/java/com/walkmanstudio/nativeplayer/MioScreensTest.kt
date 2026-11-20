@@ -53,7 +53,7 @@ class MioScreensTest {
                 Surface(Modifier.size(390.dp, 820.dp)) {
                     MioNowPlaying(playing.copy(seekEnabled = false), specs,
                         CassetteActions(sound = { requestedAction = "audio" },
-                            toggle = { requestedAction = "toggle" }), canFavorite = true) { FixtureCover(0, it) }
+                            toggle = { requestedAction = "toggle" })) { FixtureCover(0, it) }
                 }
             }
         }
@@ -72,6 +72,8 @@ class MioScreensTest {
         var selectedQueueIndex = -1
         var removedQueueIndex = -1
         var stopped = false
+        var toggled = false
+        var seekPosition = -1L
         lateinit var view: View
         compose.setContent {
             view = LocalView.current
@@ -93,10 +95,12 @@ class MioScreensTest {
                         CassettePlayerScreen(WalkmanTheme.MIO, CassetteScreenState(
                             playing.title, playing.artist, playing.album, playing.positionMs, playing.durationMs,
                             playing = true, requested = true, queueIndex = 1, queueCount = 4, specs = specs),
-                            CassetteActions(stop = { stopped = true }), visible = false)
+                            CassetteActions(stop = { stopped = true }, toggle = { toggled = true },
+                                seek = { seekPosition = it }), visible = false)
                     } else Column {
-                        MioHeader(pane.label, centered = pane == MioDestination.PLAYER,
-                            back = if (pane == MioDestination.PLAYER) ({}) else null) {
+                        if (pane == MioDestination.PLAYER) MioNowHeader({}, false, true, {}) {
+                            IconButton(onClick = {}) { StudioIcon(R.drawable.ic_more, "Tùy chọn") }
+                        } else MioHeader(pane.label, editorial = pane == MioDestination.LIBRARY) {
                             if (pane == MioDestination.LIBRARY) IconButton(onClick = {}) {
                                 StudioIcon(R.drawable.ic_mio_search, "Tìm bài hát")
                             }
@@ -107,16 +111,17 @@ class MioScreensTest {
                         Box(Modifier.weight(1f)) {
                             when (pane) {
                                 MioDestination.PLAYER -> MioNowPlaying(playing, specs, CassetteActions(),
-                                    canFavorite = true, highResolutionSource = true) { FixtureCover(0, it) }
-                                MioDestination.LIBRARY -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    highResolutionSource = true) { FixtureCover(0, it) }
+                                MioDestination.LIBRARY -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     MioLibraryTabs("albums") {}
                                     val fixtureAlbums = listOf("Quiet Circuits" to "North Window",
-                                        "Evergreen" to "Mara Vale", "Ribbons" to "Blue Avenue", "April Air" to "Amber Field")
-                                    repeat(2) { row ->
+                                        "Evergreen" to "Mara Vale", "Ribbons" to "Blue Avenue", "April Air" to "Amber Field",
+                                        "Distant Shore" to "Theo Lake", "After Hours" to "Mara Vale")
+                                    repeat(3) { row ->
                                         MioAlbumRow { column, modifier ->
                                             val index = row * 2 + column
                                             val (title, artist) = fixtureAlbums[index]
-                                            Box(modifier) { MioAlbumTile(title, artist, {}) { FixtureCover(index, it) } }
+                                            Box(modifier) { MioAlbumTile(title, artist, {}, leadRow = row == 0) { FixtureCover(index, it) } }
                                         }
                                     }
                                 }
@@ -150,7 +155,14 @@ class MioScreensTest {
         savePreview("retro-cassette", view)
         compose.onNodeWithContentDescription("Dừng phát").performClick()
         assertTrue(stopped)
-        compose.runOnIdle { extra = "queue" }
+        compose.onNodeWithContentDescription("Tạm dừng").performClick()
+        assertTrue(toggled)
+        compose.onNodeWithContentDescription("Cassette. Vuốt ngang để tua bài hát")
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(.5f) }
+        assertEquals(122500L, seekPosition)
+        compose.runOnIdle { mode = "light" }
+        savePreview("retro-cassette-compact", view)
+        compose.runOnIdle { mode = "dark"; extra = "queue" }
         compose.onNodeWithContentDescription("Bài hiện tại").assertIsDisplayed()
         savePreview("queue-dark", view)
         compose.onNodeWithText("Evergreen").performClick()
@@ -169,7 +181,9 @@ class MioScreensTest {
             listOf(0xFF3B557C, 0xFFE7A18B, 0xFF293546, 0xFF182731),
             listOf(0xFF8498A3, 0xFF50666C, 0xFF26473F, 0xFF152F2C),
             listOf(0xFF322D4A, 0xFFE6A26B, 0xFFB96742, 0xFF25344E),
-            listOf(0xFF7A7350, 0xFFF1C56C, 0xFF57472B, 0xFF2C3925),
+            listOf(0xFF99717B, 0xFFF1BBB2, 0xFF503B4B, 0xFF373243),
+            listOf(0xFF445779, 0xFFF99951, 0xFF44556B, 0xFF1D2A3D),
+            listOf(0xFF326185, 0xFFBC945D, 0xFF554030, 0xFF2A2832),
         )[index].map { Color(it) }
         Canvas(modifier.clip(RoundedCornerShape(12.dp))) {
             drawRect(Brush.verticalGradient(listOf(palette[0], palette[1], palette[3]),
@@ -229,6 +243,30 @@ class MioScreensTest {
                 drawLine(palette[1].copy(alpha = .24f), Offset(x, y), Offset(x + size.width * .17f, y), 1f)
             }
         }
+    }
+
+    @Test fun spriteReelsMoveIndependentlyOfHousing() {
+        val angle = mutableDoubleStateOf(0.0)
+        lateinit var view: View
+        compose.setContent {
+            view = LocalView.current
+            StudioTheme("dark") {
+                Surface(Modifier.size(390.dp, 844.dp).testTag("mio-preview")) {
+                    MioCassetteSprites(CassetteScreenState(title = "Bên kia mùa mưa"), CassetteActions(),
+                        angle, .25f, Modifier) {}
+                }
+            }
+        }
+        fun patch(image: Bitmap, x: Int, y: Int): List<Int> =
+            (0 until 22).flatMap { dy -> (0 until 22).map { dx -> image.getPixel(x + dx, y + dy) } }
+        val frameBefore = HostViewCapture.capture(compose, "mio-preview", view)
+        compose.runOnIdle { angle.doubleValue = 42.0 }
+        val frameAfter = HostViewCapture.capture(compose, "mio-preview", view)
+        assertNotEquals(patch(frameBefore, 95, 295), patch(frameAfter, 95, 295))
+        assertNotEquals(patch(frameBefore, 260, 295), patch(frameAfter, 260, 295))
+        assertEquals(patch(frameBefore, 102, 158), patch(frameAfter, 102, 158))
+        frameBefore.recycle()
+        frameAfter.recycle()
     }
 
     @Test fun compactPlayerKeepsActionsAtLargeFontWithMissingArtwork() {

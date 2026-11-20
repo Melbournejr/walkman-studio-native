@@ -180,61 +180,7 @@ internal fun CassetteDeckScreen(
                         }
                     }
                 } else if (theme == WalkmanTheme.MIO) {
-                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        MioHeader("Retro Mode", centered = true, back = actions.close) {
-                            IconButton(onClick = actions.palette) { StudioIcon(R.drawable.ic_more, "Tùy chọn Retro") }
-                        }
-                        CassetteDeckHousing(theme, Modifier.fillMaxWidth().testTag("cassette-deck")) {
-                            Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 22.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Box(Modifier.fillMaxWidth().aspectRatio(1.35f)
-                                    .testTag("cassette-art").then(deckSeek)) {
-                                    CassetteFace(theme, state.title, state.artist, progress, position, rotation, known)
-                                }
-                                Canvas(Modifier.fillMaxWidth().height(22.dp)) {
-                                    val columns = 31
-                                    val step = size.width / (columns + 10)
-                                    for (row in 0..2) for (column in 0 until columns) {
-                                        val hole = Offset(step * (5 + column + row * .2f), size.height * (.23f + row * .27f))
-                                        drawCircle(Color.White.copy(alpha = .14f), step * .23f, hole + Offset(0f, .7.dp.toPx()))
-                                        drawCircle(Color(0xFF08090A), step * .20f, hole)
-                                    }
-                                }
-                                Surface(color = Color(0xFF101012), shape = RoundedCornerShape(8.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF585048))) {
-                                    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
-                                        Text(state.title.ifBlank { "Chưa chọn bài" }, style = MaterialTheme.typography.titleMedium,
-                                            color = theme.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                        if (attribution.isNotBlank()) Text(attribution, style = MaterialTheme.typography.bodySmall,
-                                            color = theme.ink.copy(alpha = .75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Canvas(Modifier.fillMaxWidth().padding(top = 8.dp).height(17.dp)) {
-                                            val bars = 44
-                                            val step = size.width / bars
-                                            repeat(bars) { index ->
-                                                val filled = (index + 1f) / bars <= progress
-                                                val height = size.height * (.25f + .75f * index / (bars - 1))
-                                                drawRect(theme.accent.copy(alpha = if (filled) .95f else .16f),
-                                                    Offset(index * step, size.height - height),
-                                                    androidx.compose.ui.geometry.Size(step * .63f, height))
-                                            }
-                                        }
-                                    }
-                                }
-                                seek(false)
-                                MechanicalTransport(theme, state.requested, state.playbackState, animations,
-                                    actions.toggle, actions.previous, actions.next, Modifier.fillMaxWidth(), onStop = actions.stop)
-                            }
-                        }
-                        DeckAuxiliaryBar(theme, state, actions, Modifier.fillMaxWidth(), portraitBottom = true)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                            IconToggleButton(state.favorite, { actions.favorite() }) {
-                                StudioIcon(if (state.favorite) R.drawable.ic_favorite else R.drawable.ic_mio_heart, "Yêu thích bài hát")
-                            }
-                            IconToggleButton(state.shuffled, { actions.shuffle() }) { StudioIcon(R.drawable.ic_shuffle, "Ngẫu nhiên") }
-                            IconToggleButton(state.repeatOne, { actions.repeat() }) { StudioIcon(R.drawable.ic_repeat, "Lặp một bài") }
-                        }
-                    }
+                    MioCassetteSprites(state, actions, rotation, progress, deckSeek) { seek(false) }
                 } else {
                     // Keep an accessibility scroll ancestor, while measuring a bounded
                     // content group. At 100% the tested400x800/360x640 viewports do not scroll.

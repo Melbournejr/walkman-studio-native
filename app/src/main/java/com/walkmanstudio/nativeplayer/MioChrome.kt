@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -40,12 +42,12 @@ internal fun MioNavigation(active: MioDestination, select: (MioDestination) -> U
                 val selected = item == active
                 val ink = if (selected) colors.primary else colors.onSurfaceVariant
                 Column(
-                    Modifier.weight(1f).heightIn(min = 62.dp)
+                    Modifier.weight(1f).heightIn(min = 68.dp)
                         .selectable(selected, role = Role.Tab, onClick = { select(item) }).padding(vertical = 9.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
-                    CompositionLocalProviderInk(ink) { StudioIcon(item.icon, modifier = Modifier.size(20.dp)) }
+                    CompositionLocalProviderInk(ink) { StudioIcon(item.icon, modifier = Modifier.size(23.dp)) }
                     Text(item.label, color = ink, style = MaterialTheme.typography.labelSmall,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, maxLines = 2)
                 }
@@ -61,19 +63,21 @@ private fun CompositionLocalProviderInk(ink: Color, content: @Composable () -> U
 
 @Composable
 internal fun MioHeader(
-    title: String, centered: Boolean = false, back: (() -> Unit)? = null,
+    title: String, centered: Boolean = false, back: (() -> Unit)? = null, editorial: Boolean = false,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Box(Modifier.fillMaxWidth().statusBarsPadding().heightIn(min = 52.dp)) {
         if (centered) {
             Text(title, Modifier.align(Alignment.Center).padding(horizontal = 96.dp).semantics { heading() },
-                style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                style = if (editorial) MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Serif, fontSize = 19.sp)
+                else MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
             back?.let { IconButton(onClick = it) { StudioIcon(if (centered) R.drawable.ic_expand else R.drawable.ic_back, "Trở lại") } }
             if (centered) Spacer(Modifier.weight(1f))
             else Text(title, Modifier.weight(1f).padding(start = if (back == null) 20.dp else 0.dp).semantics { heading() },
-                style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                style = if (editorial) MaterialTheme.typography.headlineSmall.copy(fontFamily = FontFamily.Serif, fontSize = 28.sp)
+                    else MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             actions()
         }
     }
@@ -84,15 +88,16 @@ internal fun MioUnderlinedTabs(items: List<Pair<String, String>>, active: String
     val colors = MaterialTheme.colorScheme
     Column {
         LazyRow(Modifier.fillMaxWidth().selectableGroup(), contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            horizontalArrangement = Arrangement.spacedBy(22.dp)) {
             items.forEach { (id, title) ->
                 item(key = id) {
                     val selected = active == id
                     Column(Modifier.width(IntrinsicSize.Max).heightIn(min = 48.dp).selectable(selected, role = Role.Tab, onClick = { select(id) }),
                         verticalArrangement = Arrangement.Bottom) {
                         Text(title, color = if (selected) colors.primary else colors.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 10.dp))
-                        Spacer(Modifier.fillMaxWidth().height(2.dp)
+                            style = MaterialTheme.typography.labelLarge.copy(fontFamily = FontFamily.Serif, fontSize = 15.sp),
+                            modifier = Modifier.padding(bottom = 10.dp))
+                        Spacer(Modifier.fillMaxWidth().height(3.dp)
                             .background(if (selected) colors.primary else Color.Transparent))
                     }
                 }
@@ -121,11 +126,11 @@ internal fun MioPanelRow(icon: Int, title: String, summary: String, minHeight: D
 }
 
 @Composable
-internal fun MioAlbumTile(title: String, artist: String, open: () -> Unit, art: @Composable (Modifier) -> Unit) {
+internal fun MioAlbumTile(title: String, artist: String, open: () -> Unit, leadRow: Boolean = true, art: @Composable (Modifier) -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = "Mở album", onClick = open),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        art(Modifier.fillMaxWidth().aspectRatio(1f))
-        Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        art(Modifier.fillMaxWidth().aspectRatio(if (leadRow) 1.03f else 1.34f))
+        Text(title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Serif), maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (artist.isNotBlank()) Text(artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }

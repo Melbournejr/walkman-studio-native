@@ -3,6 +3,14 @@ package com.walkmanstudio.nativeplayer
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.sp
+import kotlin.math.sin
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -27,8 +35,6 @@ internal fun MioNowPlaying(
     state: PlaybackUi,
     specs: List<String>,
     actions: CassetteActions,
-    favorite: Boolean = false,
-    canFavorite: Boolean = false,
     highResolutionSource: Boolean = false,
     artwork: @Composable (Modifier) -> Unit,
 ) {
@@ -37,27 +43,22 @@ internal fun MioNowPlaying(
         val wide = maxWidth >= 640.dp
         val portraitHeight = maxHeight
         val coverWidth = if (wide) minOf((maxWidth - 88.dp) / 2, 440.dp)
-            else minOf(maxWidth - 48.dp, maxHeight * .54f, 440.dp).coerceAtLeast(96.dp)
+            else minOf(maxWidth * .84f, maxHeight * .56f, 440.dp).coerceAtLeast(96.dp)
         val controls: @Composable () -> Unit = {
             val panelHeight = if (wide || state.id == null) 0.dp
-                else (portraitHeight - coverWidth - 32.dp).coerceAtMost(332.dp).coerceAtLeast(0.dp)
+                else (portraitHeight - coverWidth - 44.dp).coerceAtMost(300.dp).coerceAtLeast(0.dp)
             Column(Modifier.width(coverWidth).heightIn(min = panelHeight),
                 verticalArrangement = if (panelHeight >= 300.dp) Arrangement.SpaceBetween else Arrangement.spacedBy(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(state.title.ifBlank { "Chưa chọn bài" }, style = MaterialTheme.typography.titleLarge,
-                            maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        listOf(state.artist, state.album).filter(String::isNotBlank).forEach {
-                            Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    if (canFavorite) {
-                        IconToggleButton(favorite, { actions.favorite() }) {
-                            StudioIcon(if (favorite) R.drawable.ic_favorite else R.drawable.ic_mio_heart, "Yêu thích bài hát",
-                                Modifier.size(21.dp))
-                        }
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(state.title.ifBlank { "Chưa chọn bài" },
+                        style = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Serif, fontSize = 28.sp),
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (state.artist.isNotBlank()) Text(state.artist,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Serif),
+                        color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (state.album.isNotBlank()) Text(state.album,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic),
+                        color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (state.id != null) {
                     MioSeekBar(state, actions.seek)
@@ -87,15 +88,15 @@ internal fun MioNowPlaying(
                         TextButton(onClick = actions.details) { Text("Chi tiết") }
                     }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     if (specs.isNotEmpty()) {
-                        Surface(color = colors.surfaceContainerLow, shape = RoundedCornerShape(8.dp),
+                        Surface(color = colors.surfaceContainerLow, shape = RoundedCornerShape(20.dp),
                             border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = .5f))) {
                             Text(specs.take(3).joinToString("  |  "), Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                 style = MaterialTheme.typography.labelMedium)
                         }
                     }
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(12.dp))
                     IconButton(onClick = actions.sound) {
                         CompositionLocalProvider(LocalContentColor provides colors.primary) {
                             StudioIcon(R.drawable.ic_audio_controls, "Audio Lab", Modifier.size(22.dp))
@@ -114,20 +115,55 @@ internal fun MioNowPlaying(
         } else {
             Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
                 colors.background, colors.background, colors.primary.copy(alpha = .035f).compositeOver(colors.background))))
-                .verticalScroll(rememberScrollState()).heightIn(min = portraitHeight).padding(top = 12.dp, bottom = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)) {
-                Box(Modifier.size(coverWidth)) {
+                .verticalScroll(rememberScrollState()).heightIn(min = portraitHeight).padding(top = 28.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                val frame = RoundedCornerShape(16.dp)
+                Box(Modifier.size(coverWidth).clip(frame).border(1.dp, colors.primary.copy(alpha = .45f), frame)) {
                     artwork(Modifier.matchParentSize())
                     if (highResolutionSource) Surface(
-                        Modifier.align(Alignment.TopEnd).padding(12.dp), color = colors.background,
+                        Modifier.align(Alignment.TopStart).padding(14.dp), color = colors.background,
                         shape = RoundedCornerShape(4.dp), border = BorderStroke(1.dp, colors.primary),
                     ) {
-                        Text("Hi-Res", Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        Text("Hi-Res\nAUDIO", Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                             color = colors.primary, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 controls()
+                if (state.id != null) MioWaveFooter(Modifier.fillMaxWidth().height(76.dp).offset(y = (-20).dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun MioWaveFooter(modifier: Modifier) {
+    val accent = MaterialTheme.colorScheme.primary
+    Canvas(modifier) {
+        repeat(13) { line ->
+            val path = Path()
+            for (step in 0..64) {
+                val t = step / 64f
+                val y = size.height * (.77f - .43f * t +
+                    .24f * sin(t * 9f - line * .14f) + .012f * line)
+                if (step == 0) path.moveTo(0f, y) else path.lineTo(t * size.width, y)
+            }
+            drawPath(path, Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .23f),
+                accent.copy(alpha = .11f), Color.Transparent), endX = size.width), style = Stroke(.6.dp.toPx()))
+        }
+    }
+}
+
+@Composable
+internal fun MioNowHeader(
+    close: () -> Unit, favorite: Boolean, canFavorite: Boolean, toggleFavorite: () -> Unit,
+    actions: @Composable RowScope.() -> Unit,
+) {
+    Box(Modifier.padding(top = 12.dp)) {
+        MioHeader("Mio Player", centered = true, back = close, editorial = true) {
+            if (canFavorite) IconToggleButton(favorite, { toggleFavorite() }) {
+                StudioIcon(if (favorite) R.drawable.ic_favorite else R.drawable.ic_mio_heart, "Yêu thích bài hát")
+            }
+            actions()
         }
     }
 }
