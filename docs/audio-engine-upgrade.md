@@ -87,3 +87,22 @@ An owner can configure the GitHub Actions environment `stage12-signing` for revi
 If the existing signing custodian already has an authorized signing system, they can instead return the signed release APK for the local staging command above. This permits signature validation before the source merge without transferring the key.
 
 Once the workflow exists on reviewed `main`, dispatch **Build and sign Walkman Studio Native Stage 12** on `main`. The build job runs without signing secrets. The signing job validates the candidate against the exact published Stage 11 APK and uploads the staged distribution only after verification. Submit that generated distribution through normal review before dispatching **Publish Walkman Studio Native Stage 12**. The signing job has read-only repository access.
+
+## Preserve an installed Stage 11 app
+
+Keep Stage 11 installed and retain its app data while locating the original signer. The tested in-place upgrade path requires the existing package name, a higher version code and the signer pinned by the Stage 11 updater.
+
+The public Stage 9d, Stage 10 and Stage 11 APKs were downloaded and verified independently with `apksigner`. Their SHA-256 file digests agree with the GitHub release records. Each has a single v2 signer with subject `C=US, O=Android, CN=Android Debug` and certificate SHA-256 `2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2`. Their version codes are 105, 106 and 107, respectively.
+
+The Stage 11 final report and APK QA record identify the original signer as the old build environment's review/install identity. The release manifest records original native source commit `2aceaa68fc2de7b6857d00f4a5f718ed434480c1`. The publication workflow reconstructed the already signed APK from checksummed parts, then uploaded the identical bytes. The public `native` source snapshot and tag both point to `cad80f2`. The current cloud review key produces certificate `78c1ff2838c2f2f51f104457d64612db5adc76ce7bf479d5d6f99b1bee6f6f33`. GitHub denied secret and environment metadata requests, so a protected copy of the original key is unconfirmed.
+
+Ask the custodian of the original Stage 9d–11 build workstation or its backups to check the signing entry. On that trusted host, they can print only its public certificate fingerprint, with the password entered at the local prompt.
+
+```sh
+set -o pipefail
+keytool -exportcert -keystore /path/to/original.keystore -alias ORIGINAL_ALIAS | sha256sum
+```
+
+If the fingerprint matches, have the custodian sign the Stage 12 release APK through the existing authorized signing setup and return only the signed APK. The staging check verifies possession through a valid APK signature. The custodian can also configure the protected environment described above for signing after review.
+
+If the key is confirmed permanently lost, keep the installed app as the working copy while planning any migration. The published Stage 11 manifest has `allowBackup=false`. Its playback log export produces diagnostics and cannot restore the app. Stage 11 has no library or settings export. A build installed under a different identity cannot read the existing installation's private Room database, preferences or folder grants. Keep independent copies of the source music files and record visible settings and collections while Stage 11 is still usable. Any future separate installation would need fresh folder grants, a rescan, and manual re-entry of data for which Stage 11 offers no export. A future export/import feature would help data created in builds that can actually run it. There is no verified full recovery path for the current installation.
