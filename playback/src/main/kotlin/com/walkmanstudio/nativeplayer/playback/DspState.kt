@@ -11,12 +11,12 @@ import java.util.concurrent.atomic.AtomicReference
 object DspSettings {
     fun encode(config: DspConfig): String = JSONObject().apply {
         put("direct", config.sourceDirect); put("bands", JSONArray(config.bands)); put("bass",config.clearBass)
-        put("preamp",config.preamp);put("replay",config.replayGain.name);put("guard",config.preventClipping);put("dither",config.dither)
+        put("preamp",config.preamp);put("replay",config.replayGain.name);put("guard",config.preventClipping);put("dither",config.dither);put("limiter",config.limiter)
     }.toString()
     fun decode(raw: String?): DspConfig = try {
         if (raw == null || raw.length > 4096) DspConfig() else JSONObject(raw).let { j ->
             val bands=j.getJSONArray("bands");require(bands.length()==10)
-            DspConfig(j.getBoolean("direct"),List(10){bands.getDouble(it)},j.getDouble("bass"),j.getDouble("preamp"),ReplayGainMode.valueOf(j.getString("replay")),j.getBoolean("guard"),if(j.has("dither"))j.getBoolean("dither")else true)
+            DspConfig(j.getBoolean("direct"),List(10){bands.getDouble(it)},j.getDouble("bass"),j.getDouble("preamp"),ReplayGainMode.valueOf(j.getString("replay")),j.getBoolean("guard"),if(j.has("dither"))j.getBoolean("dither")else true,j.optBoolean("limiter",false))
         }
     }catch (_: Exception){DspConfig()}
     fun read(context: Context) = decode(context.getSharedPreferences("dsp",Context.MODE_PRIVATE).getString("config",null))

@@ -51,4 +51,32 @@ class DspEngineTest {
         }
         try{DspConfig(bands=emptyList());fail("Invalid band count")}catch(_:IllegalArgumentException){}
     }
+    @Test fun rapidExtremeEditsRemainFiniteAndKeepSilentChannelsIsolated() {
+        for (rate in listOf(8000, 32001, 44100, 192000, 768000)) {
+            val flat = DspConfig(sourceDirect = false)
+            val dsp = DspEngine(rate, 2, flat)
+            for (frame in 0 until 20000) {
+                if (frame % 221 == 0) {
+                    val db = if (frame % 2 == 0) 12.0 else -12.0
+                    dsp.update(flat.copy(bands = List(10) { db }), ReplayGainInfo())
+                }
+                val output = dsp.process(if (frame == 0) .5 else Double.NaN, 0)
+                assertTrue(output.isFinite())
+                assertEquals(0.0, dsp.process(0.0, 1), 0.0)
+            }
+        }
+    }
+
+    @Test fun optionalSoftKneePreservesSmallSignalsAndSourceDirectBypassesIt() {
+        val flat = DspConfig(sourceDirect = false, preamp = 6.0, preventClipping = false)
+        val limited = DspEngine(48000, 1, flat.copy(limiter = true))
+        val normal = DspEngine(48000, 1, flat)
+        assertEquals(normal.process(.2, 0), limited.process(.2, 0), 0.0)
+        assertEquals(1.0, normal.process(.75, 0), 0.0)
+        val peak = limited.process(.75, 0)
+        assertTrue(peak in .9..<1.0)
+        assertEquals(-peak, limited.process(-.75, 0), 0.0)
+        val direct = DspEngine(48000, 1, flat.copy(sourceDirect = true, limiter = true))
+        assertEquals(1.25, direct.process(1.25, 0), 0.0)
+    }
 }
