@@ -1,0 +1,130 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+package com.walkmanstudio.nativeplayer
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+internal enum class MioDestination(val label: String, val icon: Int) {
+    LIBRARY("Thư viện", R.drawable.ic_library),
+    PLAYER("Đang phát", R.drawable.ic_mio_note),
+    AUDIO("Audio Lab", R.drawable.ic_audio_controls),
+    SETTINGS("Cài đặt", R.drawable.ic_settings)
+}
+
+@Composable
+internal fun MioNavigation(active: MioDestination, select: (MioDestination) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().background(colors.surface).navigationBarsPadding()) {
+        HorizontalDivider(color = colors.outlineVariant)
+        Row(Modifier.fillMaxWidth().selectableGroup()) {
+            MioDestination.entries.forEach { item ->
+                val selected = item == active
+                val ink = if (selected) colors.primary else colors.onSurfaceVariant
+                Column(
+                    Modifier.weight(1f).heightIn(min = 60.dp)
+                        .selectable(selected, role = Role.Tab, onClick = { select(item) }).padding(vertical = 9.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    CompositionLocalProviderInk(ink) { StudioIcon(item.icon, modifier = Modifier.size(20.dp)) }
+                    Text(item.label, color = ink, style = MaterialTheme.typography.labelSmall, maxLines = 2)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompositionLocalProviderInk(ink: Color, content: @Composable () -> Unit) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalContentColor provides ink, content = content)
+}
+
+@Composable
+internal fun MioHeader(
+    title: String, centered: Boolean = false, back: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    Box(Modifier.fillMaxWidth().statusBarsPadding().heightIn(min = 52.dp)) {
+        if (centered) {
+            Text(title, Modifier.align(Alignment.Center).padding(horizontal = 96.dp).semantics { heading() },
+                style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
+            back?.let { IconButton(onClick = it) { StudioIcon(if (centered) R.drawable.ic_expand else R.drawable.ic_back, "Trở lại") } }
+            if (centered) Spacer(Modifier.weight(1f))
+            else Text(title, Modifier.weight(1f).padding(start = if (back == null) 20.dp else 0.dp).semantics { heading() },
+                style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            actions()
+        }
+    }
+}
+
+@Composable
+internal fun MioUnderlinedTabs(items: List<Pair<String, String>>, active: String, select: (String) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Column {
+        LazyRow(Modifier.fillMaxWidth().selectableGroup(), contentPadding = PaddingValues(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            items.forEach { (id, title) ->
+                item(key = id) {
+                    val selected = active == id
+                    Column(Modifier.width(IntrinsicSize.Max).heightIn(min = 48.dp).selectable(selected, role = Role.Tab, onClick = { select(id) }),
+                        verticalArrangement = Arrangement.Bottom) {
+                        Text(title, color = if (selected) colors.primary else colors.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 10.dp))
+                        Spacer(Modifier.fillMaxWidth().height(2.dp)
+                            .background(if (selected) colors.primary else Color.Transparent))
+                    }
+                }
+            }
+        }
+        HorizontalDivider(color = colors.outlineVariant)
+    }
+}
+
+@Composable
+internal fun MioPanelRow(icon: Int, title: String, summary: String, minHeight: Dp = 62.dp, onClick: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(12.dp)
+    Row(Modifier.fillMaxWidth().clip(shape).background(scheme.surfaceContainerLow)
+        .border(1.dp, scheme.outlineVariant.copy(alpha = .45f), shape)
+        .clickable(role = Role.Button, onClick = onClick).heightIn(min = minHeight)
+        .padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        CompositionLocalProviderInk(scheme.primary) { StudioIcon(icon, modifier = Modifier.size(22.dp)) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            if (summary.isNotBlank()) Text(summary, color = scheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        }
+        CompositionLocalProviderInk(scheme.onSurfaceVariant) { StudioIcon(R.drawable.ic_mio_chevron, modifier = Modifier.size(16.dp)) }
+    }
+}
+
+@Composable
+internal fun MioAlbumTile(title: String, artist: String, open: () -> Unit, art: @Composable (Modifier) -> Unit) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = "Mở album", onClick = open),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        art(Modifier.fillMaxWidth().aspectRatio(1f))
+        Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (artist.isNotBlank()) Text(artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}

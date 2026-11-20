@@ -187,6 +187,7 @@ internal fun CassetteDeckScreen(
                             Modifier.fillMaxWidth().height(viewportHeight).padding(horizontal = 12.dp, vertical = 4.dp)
                                 .testTag("cassette-content"),
                             queueHeaderHeight = queueHeaderHeight,
+                            mioFinish = theme == WalkmanTheme.MIO,
                             top = { DeckAuxiliaryBar(theme, state, actions, Modifier.fillMaxWidth(), portraitTop = true) },
                             bottom = { DeckAuxiliaryBar(theme, state, actions, Modifier.fillMaxWidth(), portraitBottom = true) },
                             information = {
@@ -221,6 +222,7 @@ internal fun CassetteDeckScreen(
 private fun NaturalPortraitDeckLayout(
     modifier: Modifier,
     queueHeaderHeight: Dp,
+    mioFinish: Boolean,
     top: @Composable () -> Unit,
     bottom: @Composable () -> Unit,
     information: @Composable () -> Unit,
@@ -246,7 +248,7 @@ private fun NaturalPortraitDeckLayout(
         val groupHeight = topPlaceable.height + casePlaceable.height + informationPlaceable.height + bottomPlaceable.height
         // All controls belong to one compact device group. Extra background from
         // the physical tape ratio stays outside, never between device and controls.
-        val groupTop = (height - groupHeight).coerceAtLeast(0) / 2
+        val groupTop = (height - groupHeight).coerceAtLeast(0) / if (mioFinish) 3 else 2
         layout(width, height) {
             topPlaceable.placeRelative(0, groupTop)
             val caseTop = groupTop + topPlaceable.height
@@ -269,6 +271,11 @@ private fun DeckAuxiliaryBar(
         if (!portraitBottom) {
             IconButton(onClick = actions.close, modifier = Modifier.size(48.dp)) {
                 StudioIcon(R.drawable.ic_expand, "Thu nhỏ trình phát")
+            }
+            if (portraitTop) Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Text("Retro Mode", Modifier.background(theme.face, RoundedCornerShape(14.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                    color = theme.ink, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             IconToggleButton(checked = state.favorite, onCheckedChange = { actions.favorite() }, modifier = Modifier.size(48.dp)) {
                 StudioIcon(R.drawable.ic_favorite, if (state.favorite) "Bỏ yêu thích" else "Thêm vào yêu thích")
@@ -358,15 +365,19 @@ private fun DeckProgress(
     theme: WalkmanTheme, duration: Long, position: Long, progress: Float, enabled: Boolean,
     inline: Boolean, onChange: (Float) -> Unit, onFinish: () -> Unit,
 ) {
-    val red = if (theme.dark) Color(0xFFFF6969) else Color(0xFFB4232C)
+    val progressInk = when {
+        theme == WalkmanTheme.MIO -> theme.accent
+        theme.dark -> Color(0xFFFF6969)
+        else -> Color(0xFFB4232C)
+    }
     val slider: @Composable (Modifier) -> Unit = { modifier ->
         Slider(value = progress, onValueChange = onChange, onValueChangeFinished = onFinish, enabled = enabled,
             modifier = modifier.heightIn(min = 48.dp).testTag("cassette-progress").semantics { contentDescription = "Tua bài hát" },
-            thumb = { Box(Modifier.size(12.dp).background(if (enabled) red else theme.ink.copy(alpha = .35f), CircleShape)) },
+            thumb = { Box(Modifier.size(12.dp).background(if (enabled) progressInk else theme.ink.copy(alpha = .35f), CircleShape)) },
             track = { Canvas(Modifier.fillMaxWidth().height(2.dp)) {
                 val y = size.height / 2f
                 drawLine(theme.ink.copy(alpha = .22f), Offset(0f, y), Offset(size.width, y), size.height, StrokeCap.Round)
-                drawLine(red, Offset(0f, y), Offset(size.width * progress, y), size.height, StrokeCap.Round)
+                drawLine(progressInk, Offset(0f, y), Offset(size.width * progress, y), size.height, StrokeCap.Round)
             } })
     }
     val elapsed: @Composable () -> Unit = {

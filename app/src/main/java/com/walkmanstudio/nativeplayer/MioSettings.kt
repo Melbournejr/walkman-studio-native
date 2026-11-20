@@ -2,13 +2,9 @@
 package com.walkmanstudio.nativeplayer
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,14 +26,19 @@ enum class MioSettingsSection(val label: String) {
 }
 
 @Composable
-internal fun MioSettingsTabs(section: MioSettingsSection, select: (MioSettingsSection) -> Unit) {
-    val state = rememberLazyListState(initialFirstVisibleItemIndex = section.ordinal)
-    LaunchedEffect(section) { state.animateScrollToItem(section.ordinal) }
-    LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(MioSpacing.compact),
-        contentPadding = PaddingValues(horizontal = MioSpacing.gutter)) {
-        items(MioSettingsSection.entries, key = { it.name }) { choice ->
-            FilterChip(section == choice, { select(choice) }, label = { Text(choice.label) },
-                modifier = Modifier.heightIn(min = MioSpacing.touch))
+internal fun MioSettingsIndex(select: (MioSettingsSection) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = MioSpacing.gutter, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MioSettingsSection.entries.forEach { section ->
+            val (icon, detail) = when (section) {
+                MioSettingsSection.APPEARANCE -> R.drawable.ic_palette to "Chủ đề, Đang phát, màu retro"
+                MioSettingsSection.PLAYBACK -> R.drawable.ic_play to "Âm lượng và xoay cassette"
+                MioSettingsSection.AUDIO -> R.drawable.ic_audio_controls to "EQ, ReplayGain, DSD, USB DAC"
+                MioSettingsSection.LIBRARY -> R.drawable.ic_folder to "Quét và quản lý thư mục"
+                MioSettingsSection.UPDATES -> R.drawable.ic_update to "Cập nhật ứng dụng qua OTA"
+                MioSettingsSection.ABOUT -> R.drawable.ic_error to "Mio Player · v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
+            }
+            MioPanelRow(icon, section.label, detail, minHeight = 72.dp) { select(section) }
         }
     }
 }

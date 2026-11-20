@@ -6,6 +6,8 @@ import androidx.compose.ui.graphics.Color
 
 enum class WalkmanTheme(val id:String,val model:String,val dark:Boolean,
     val body:Color,val face:Color,val accent:Color,val ink:Color,val display:Color,val displayInk:Color) {
+    MIO("mio", "Than và đồng", true, Color(0xFF141516), Color(0xFF292725),
+        Color(0xFFE1B980), Color(0xFFF3F5F7), Color(0xFFD4B88A), Color(0xFF242019)),
     TPS_L2("tpsl2","Xanh đêm",true,Color(0xFF142F48),Color(0xFF234B69),Color(0xFFFFC082),Color(0xFFF2F5F7),Color(0xFFDDE5D7),Color(0xFF18261C)),
     DD9("dd9","Than chì",true,Color(0xFF101413),Color(0xFF29332E),Color(0xFFCDE2CE),Color(0xFFF0F5EE),Color(0xFFBDCF9F),Color(0xFF172312)),
     RH1("rh1","Bạc lạnh",false,Color(0xFFE2E5E8),Color(0xFFF6F7F9),Color(0xFF204F73),Color(0xFF171E25),Color(0xFF112536),Color(0xFFC1E5FF)),

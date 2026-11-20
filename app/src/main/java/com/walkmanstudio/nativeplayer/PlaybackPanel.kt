@@ -32,19 +32,25 @@ fun clockTime(ms: Long): String = "${ms.coerceAtLeast(0) / 60000}:${(ms.coerceAt
 fun PlaybackPanel(model: PlaybackViewModel, artwork: Modifier = Modifier, open: () -> Unit) {
     val state by model.state.collectAsStateWithLifecycle()
     val track by model.currentTrack.collectAsStateWithLifecycle()
+    MioMiniPlayer(state, open, model::toggle, model::next) { TrackCover(track, artwork.then(it)) }
+}
+
+@Composable
+internal fun MioMiniPlayer(state: PlaybackUi, open: () -> Unit, toggle: () -> Unit,
+    next: () -> Unit, cover: @Composable (Modifier) -> Unit) {
     if (state.id == null) return
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Column {
-            Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).clickable(onClickLabel = "Mở Đang phát", onClick = open).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                TrackCover(track, artwork.size(48.dp))
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(onClickLabel = "Mở Đang phát", onClick = open).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                cover(Modifier.size(44.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(state.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (state.artist.isNotBlank()) Text(state.artist, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (state.error != null) StudioIcon(R.drawable.ic_error, "Chưa đọc được bài hát", Modifier.size(20.dp))
-                IconButton(onClick = model::toggle) { StudioIcon(if (state.requested) R.drawable.ic_pause else R.drawable.ic_play, if (state.requested) "Tạm dừng" else "Phát") }
-                IconButton(onClick = model::next) { StudioIcon(R.drawable.ic_next, "Bài tiếp") }
+                IconButton(onClick = toggle) { StudioIcon(if (state.requested) R.drawable.ic_pause else R.drawable.ic_play, if (state.requested) "Tạm dừng" else "Phát") }
+                IconButton(onClick = next) { StudioIcon(R.drawable.ic_next, "Bài tiếp") }
             }
             LinearProgressIndicator(progress = { if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f }, modifier = Modifier.fillMaxWidth().height(2.dp))
         }
@@ -71,7 +77,6 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
     var sheet by remember { mutableStateOf(false) }
     var sheetMode by remember { mutableStateOf("sound") }
     var details by remember { mutableStateOf(false) }
-    var sleepMenu by remember { mutableStateOf(false) }
     val current = track?.takeIf { it.id.toString() == state.id }
     BackHandler(onBack = close)
     val actions = CassetteActions(
@@ -83,6 +88,11 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
     )
     val displayOptions: @Composable () -> Unit = {
         DropdownMenu(displayMenu, { displayMenu = false }) {
+            if (mode == NowPlayingMode.CLASSIC) {
+                DropdownMenuItem(text = { Text("Hàng đợi") }, onClick = { displayMenu = false; actions.queue() })
+                DropdownMenuItem(text = { Text("Audio Lab") }, onClick = { displayMenu = false; actions.sound() })
+                HorizontalDivider()
+            }
             NowPlayingMode.entries.forEach { choice ->
                 DropdownMenuItem(text = { Text(choice.label) }, onClick = { chooseMode(choice); displayMenu = false })
             }
@@ -95,37 +105,19 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
         }
     }
     Scaffold(contentWindowInsets = WindowInsets.safeDrawing, topBar = {
-        if (mode == NowPlayingMode.CLASSIC) TopAppBar(
-            title = { Text("Đang phát") },
-            navigationIcon = { IconButton(onClick = close) { StudioIcon(R.drawable.ic_expand, "Thu nhỏ trình phát") } },
-            actions = {
-                IconToggleButton(current?.isFavorite == true, { actions.favorite() }, enabled = current != null) {
-                    StudioIcon(R.drawable.ic_favorite, "Yêu thích bài hát")
-                }
-                Box {
-                    IconButton(onClick = { displayMenu = true }) { StudioIcon(R.drawable.ic_palette, "Chế độ hiển thị") }
-                    displayOptions()
-                }
-            },
-        )
+        if (mode == NowPlayingMode.CLASSIC) MioHeader("Đang phát", centered = true, back = close) {
+            Box {
+                IconButton(onClick = { displayMenu = true }) { StudioIcon(R.drawable.ic_more, "Tùy chọn Đang phát") }
+                displayOptions()
+            }
+        }
     }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             val specs = CassetteSignal.chips(signal, dsp.sourceDirect, !dsp.sourceDirect)
             if (mode == NowPlayingMode.CLASSIC) {
-                MioNowPlaying(state, specs, actions, volume = { SystemVolumeButton(Modifier.heightIn(min = MioSpacing.touch)) },
-                    sleep = {
-                        Box {
-                            TextButton(onClick = { sleepMenu = true }) {
-                                Text(if (state.sleepRemainingMs > 0) "Hẹn giờ ${clockTime(state.sleepRemainingMs)}" else "Hẹn giờ")
-                            }
-                            DropdownMenu(sleepMenu, { sleepMenu = false }) {
-                                listOf(0, 15, 30, 60, 90).forEach { minutes ->
-                                    DropdownMenuItem(text = { Text(if (minutes == 0) "Tắt hẹn giờ" else "$minutes phút") },
-                                        onClick = { model.sleep(minutes); sleepMenu = false })
-                                }
-                            }
-                        }
-                    }) { modifier -> TrackCover(track, artwork.then(modifier), large = true) }
+                MioNowPlaying(state, specs, actions, favorite = current?.isFavorite == true, canFavorite = current != null) {
+                    modifier -> TrackCover(track, artwork.then(modifier), large = true)
+                }
             } else {
                 CassettePlayerScreen(theme, CassetteScreenState(
                     title = state.title, artist = state.artist, album = state.album,

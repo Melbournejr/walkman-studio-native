@@ -10,7 +10,7 @@ Library browsing retains the paging flows and existing actions. Modern Now Playi
 
 ## Migration
 
-Mio Player replaces the public app label and artwork. PlaybackService and Media3 continue to own playback. Database names, preference keys, saved display IDs, playback position and file permissions keep their prior formats. An unset presentation preference now opens Modern. Saved cassette and vinyl preferences remain readable. The cassette landscape lock continues to apply only while the cassette player is on screen.
+Mio Player replaces the public app label and artwork. PlaybackService and Media3 continue to own playback. Database names, preference keys, saved display IDs, playback position and file permissions keep their prior formats. An unset presentation preference now opens Modern. Saved cassette and vinyl preferences remain readable. The charcoal-and-brass Mio finish is the default when no retro palette has been saved. The cassette landscape lock continues to apply only while the cassette player is on screen.
 
 Version 110 / 1.5.0 follows production version 108. Version 109 was used by the Stage 12 OTA test probe. The application ID, OTA URL policy and production certificate are unchanged. The name was checked in a preliminary public web search. Mio previously used MioPlayer for a media player on its DigiWalker devices. This is not trademark clearance.
 
@@ -22,9 +22,24 @@ Version 110 / 1.5.0 follows production version 108. Version 109 was used by the 
 - Grouped existing settings under Appearance, Playback, Audio, Library, Updates and About.
 - Retained the retro display IDs and persisted colors with original palette names.
 
-## Host previews
+## Approved design board previews
 
-The previews render Compose with fixture metadata on Robolectric API 35 and native Skia. Device and hardware audio validation are separate release checks.
+These PNGs are captured from the native Compose views with Robolectric API 35 and native Skia. The viewport sizes are 390 × 820 dp for dark and cassette and 360 × 690 dp for light, following the proportions of the two rows on the board. Fixture tracks, signal values and drawn cover artwork live in the test only. The captures omit system status icons and phone bezels.
 
-- [Modern Now Playing in dark mode](mio-previews/now-playing-dark.png)
-- [Audio Lab signal view in light mode](mio-previews/audio-lab-light.png)
+| Screen | Dark | Light |
+| --- | --- | --- |
+| Modern Now Playing | [Preview](mio-previews/now-playing-dark.png) | [Preview](mio-previews/now-playing-light.png) |
+| Music Library | [Preview](mio-previews/library-dark.png) | [Preview](mio-previews/library-light.png) |
+| Audio Lab | [Preview](mio-previews/audio-lab-dark.png) | [Preview](mio-previews/audio-lab-light.png) |
+| Settings | [Preview](mio-previews/settings-dark.png) | [Preview](mio-previews/settings-light.png) |
+| Retro Cassette | [Preview](mio-previews/retro-cassette.png) | |
+
+### Visual comparison
+
+- Modern Now Playing uses the board’s square cover, left-aligned metadata, slim brass seek track and outlined transport. After reviewing the first capture, the favorite glyph became outlined when unselected and the transport groups gained more vertical separation. The accent and metadata still reflect the active theme and track.
+- Library places two album covers per row above the compact mini-player and tab bar. The active underline now follows the label width. Artist search stays in the Tracks view, since the current library has no standalone Artist catalog. The mini-player includes the existing Next action.
+- Audio Lab uses one outlined signal panel with an axial connector and four disclosure rows. The connected device, decoder format and processing summary use measured or configured values. Settings uses the same row style with taller targets for its six destinations.
+- Retro uses charcoal housing, a brass paper label and seek accent, and a more prominent portrait header. The existing reel motion, mechanical keys, seek behavior, queue tools and landscape layout are retained. Its three-key transport and metadata placement differ from the standardized four-key illustration.
+- Vietnamese labels, real art and accessibility-sized touch targets affect type and spacing compared with the board. Physical device rendering and hardware playback are separate from these host captures.
+
+Regenerate all nine captures with `./gradlew :app:testDebugUnitTest --tests '*MioScreensTest'`. PNGs are written to `app/build/reports/mio-previews`.

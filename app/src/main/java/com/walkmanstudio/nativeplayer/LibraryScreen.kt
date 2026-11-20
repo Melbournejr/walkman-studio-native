@@ -8,7 +8,6 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -25,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -45,6 +43,8 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
     val tab by model.tab.collectAsStateWithLifecycle()
     val settingsSection by model.settingsSection.collectAsStateWithLifecycle()
     val section = MioSettingsSection.fromSaved(settingsSection)
+    val settingsDetail = tab == "settings" && settingsSection != "HOME"
+    var libraryMenu by remember { mutableStateOf(false) }
     val libraryScroll = rememberLazyListState()
     val settingsScroll = rememberLazyListState()
     LaunchedEffect(tab, section) {
@@ -68,69 +68,99 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
     var playlistTrack by remember { mutableStateOf<TrackEntity?>(null) }
     var newPlaylist by remember { mutableStateOf(false) }
     var playlistName by rememberSaveable { mutableStateOf("") }
-    val inCollection = tab != "settings" &&
+    val inCollection = tab != "settings" && tab != "audio" &&
         (f.album != null || f.playlist != null || (tab == "folders" && f.rootId != null))
     val title = when (tab) {
-        "settings" -> "Cài đặt"; "favorites" -> "Yêu thích"
+        "audio" -> "Audio Lab"
+        "settings" -> if (settingsDetail) section.label else "Cài đặt"; "favorites" -> "Yêu thích"
         "folders" -> f.folder?.substringAfterLast('/')?.ifBlank { roots.firstOrNull { it.id == f.rootId }?.displayName } ?: "Thư mục"
         else -> f.album ?: playlists.firstOrNull { it.id == f.playlist }?.name ?: "Thư viện"
     }
     LaunchedEffect(model) { model.messages.collect { snackbar.showSnackbar(it) } }
     LaunchedEffect(playback) { playback.messages.collect {snackbar.showSnackbar(it)} }
-    BackHandler(enabled = inCollection && !showNow) { model.back() }
+    BackHandler(enabled = (inCollection || settingsDetail) && !showNow) {
+        if (settingsDetail) model.showSettingsHome() else model.back()
+    }
+    val selectDestination: (MioDestination) -> Unit = { destination ->
+        when (destination) {
+            MioDestination.LIBRARY -> model.selectTab("library")
+            MioDestination.PLAYER -> model.showNowPlaying(true)
+            MioDestination.AUDIO -> model.selectTab("audio")
+            MioDestination.SETTINGS -> model.showSettingsHome()
+        }
+    }
     SharedTransitionLayout {
         AnimatedContent(targetState = showNow, label = "mini-to-now-playing") { now ->
             val sharedArt = Modifier.sharedElement(rememberSharedContentState("current-artwork"), animatedVisibilityScope = this@AnimatedContent)
             if (now) NowPlaying(playback,sharedArt,theme,displayMode,model::setWalkmanTheme, model::setNowPlayingMode, { track -> model.favorite(track) }) { model.showNowPlaying(false) }
             else Scaffold(
-                topBar = { TopAppBar(title = {
-                    if (tab == "library" && !inCollection) Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-                    else Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                },
-                    navigationIcon = { if (inCollection) IconButton(onClick = model::back) { StudioIcon(R.drawable.ic_back, "Trở lại") } },
-                    actions = { if (tab != "settings") IconButton(onClick = chooseTree) { StudioIcon(R.drawable.ic_add_folder, "Thêm thư mục nhạc") } }) },
-                bottomBar = { Column {
-                    PlaybackPanel(playback, sharedArt) { model.showNowPlaying(true) }
-                    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                        listOf(Triple("library", "Thư viện", R.drawable.ic_library), Triple("folders", "Thư mục", R.drawable.ic_folder), Triple("favorites", "Yêu thích", R.drawable.ic_favorite), Triple("settings", "Cài đặt", R.drawable.ic_settings)).forEach { (value, label, icon) ->
-                            NavigationBarItem(selected = tab == value, onClick = { model.selectTab(value) }, icon = { StudioIcon(icon) }, label = { Text(label, maxLines = 1) })
+                topBar = {
+                    val back: (() -> Unit)? = when {
+                        settingsDetail -> model::showSettingsHome
+                        inCollection -> model::back
+                        else -> null
+                    }
+                    MioHeader(title, back = back) {
+                        if (tab in setOf("library", "folders", "favorites")) {
+                            if (!inCollection) IconButton(onClick = { model.selectTab("library"); model.browse("songs") }) {
+                                StudioIcon(R.drawable.ic_mio_search, "Tìm bài hát")
+                            }
+                            Box {
+                                IconButton(onClick = { libraryMenu = true }) { StudioIcon(R.drawable.ic_more, "Tùy chọn thư viện") }
+                                DropdownMenu(libraryMenu, { libraryMenu = false }) {
+                                    DropdownMenuItem(text = { Text("Thêm thư mục nhạc") }, onClick = { libraryMenu = false; chooseTree() })
+                                    DropdownMenuItem(text = { Text("Yêu thích") }, onClick = { libraryMenu = false; model.selectTab("favorites") })
+                                }
+                            }
                         }
                     }
+                },
+                bottomBar = { Column {
+                    if (tab != "settings" && tab != "audio") PlaybackPanel(playback, sharedArt) { model.showNowPlaying(true) }
+                    MioNavigation(when (tab) {
+                        "settings" -> MioDestination.SETTINGS
+                        "audio" -> MioDestination.AUDIO
+                        else -> MioDestination.LIBRARY
+                    }, selectDestination)
                 } }, snackbarHost = { SnackbarHost(snackbar) },
             ) { padding ->
-                LazyColumn(Modifier.fillMaxSize().padding(padding), state = if (tab == "settings") settingsScroll else libraryScroll, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                LazyColumn(Modifier.fillMaxSize().padding(padding), state = if (tab == "settings" || tab == "audio") settingsScroll else libraryScroll, verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
                     if (tab == "settings") {
-                        item { MioSettingsTabs(section, model::openSettings) }
-                        item(key = section.name) {
+                        if (!settingsDetail) item { MioSettingsIndex(model::openSettings) }
+                        else item(key = section.name) {
                             MioSettingsContent(section, model, playback, updates, appearance, displayMode, theme,
                                 cassetteLandscape, total, showDeviceHelp, exportLog, chooseTree)
                         }
+                    } else if (tab == "audio") {
+                        item { Box(Modifier.fillMaxWidth().padding(horizontal = MioSpacing.gutter, vertical = 10.dp)) { AudioLab(playback) } }
                     } else if (tab == "folders" && f.rootId == null) {
+                        item { MioLibraryTabs("folders") { choice -> if (choice != "folders") { model.selectTab("library"); model.browse(choice) } } }
                         items(roots, key = { "root-${it.id}" }) { root -> RootCard(root, scans.firstOrNull { it.rootId == root.id },
                             { model.openFolder(root.id) }, { model.rescan(root.id) }, { model.rescan(root.id, true) }, { model.cancel(root.id) }, { removeRootId = root.id }, chooseTree) }
                         item { TextButton(onClick = chooseTree, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Thêm thư mục nhạc") } }
                     } else {
                         if (roots.isEmpty() && browser != "playlists") item { MioLibraryEmpty(chooseTree) }
                         if (tab == "library" && !inCollection) item {
-                            LazyRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(listOf("songs" to "Bài hát", "albums" to "Album", "playlists" to "Playlist")) { (value, label) -> FilterChip(selected = browser == value, onClick = { model.browse(value) }, label = { Text(label) }, modifier = Modifier.heightIn(min = 48.dp)) }
+                            MioLibraryTabs(browser) { choice ->
+                                if (choice == "folders") model.selectTab("folders") else model.browse(choice)
                             }
                         }
                         metadataProgress?.let { progress -> item { Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) { Text(progress, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium); TextButton(onClick = { model.cancelMetadata() }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Hủy") } } } }
                         items(scans.filter { it.running || it.state == "PERMISSION_LOST" }, key = { "scan-${it.rootId}" }) { status -> ScanCard(roots.firstOrNull { it.id == status.rootId }?.displayName ?: "Thư mục", status, { model.cancel(status.rootId) }, chooseTree) }
                         if (tab == "library" && browser == "albums" && !inCollection) {
-                            items(albums.itemCount, key = albums.itemKey { "${it.artist}|${it.album}" }) { index -> albums[index]?.let { album ->
-                                ListItem(
-                                    headlineContent = { Text(album.album, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                    supportingContent = { Column {
-                                        Text(album.artist.ifBlank { "Không có tag nghệ sĩ" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text("${formatCount(album.count)} bài · ${clockTime(album.duration)}")
-                                    } },
-                                    leadingContent = { AlbumCover(album.coverKey, "${album.artist}|${album.album}", Modifier.size(76.dp)) },
-                                    modifier = Modifier.clickable(onClickLabel = "Mở album") { model.openAlbum(album) },
-                                )
-                            } }
+                            items((albums.itemCount + 1) / 2) { row ->
+                                MioAlbumRow { column, modifier ->
+                                    Box(modifier) {
+                                        val index = row * 2 + column
+                                        if (index < albums.itemCount) albums[index]?.let { album ->
+                                            MioAlbumTile(album.album, album.artist, { model.openAlbum(album) }) { cover ->
+                                                AlbumCover(album.coverKey, "${album.artist}|${album.album}", cover, large = true)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             if (albums.loadState.refresh is LoadState.NotLoading && albums.itemCount == 0) item { Text("Chưa có album từ tag. Xem Bài hát hoặc Thư mục.", Modifier.padding(20.dp)) }
                             if (albums.loadState.refresh is LoadState.Error) item { TextButton(onClick = albums::retry) { Text("Thử đọc lại album") } }
                         } else if (tab == "library" && browser == "playlists" && !inCollection) {
@@ -201,6 +231,20 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
     if (newPlaylist) AlertDialog(onDismissRequest = { newPlaylist = false }, title = { Text("Tạo playlist") }, text = { OutlinedTextField(value = playlistName, onValueChange = { playlistName = it.take(120) }, label = { Text("Tên playlist") }, singleLine = true) }, confirmButton = {
         TextButton(enabled = playlistName.isNotBlank(), onClick = { model.createPlaylist(playlistName, playlistTrack?.id); newPlaylist = false; playlistTrack = null; playlistName = "" }) { Text("Tạo") }
     }, dismissButton = { TextButton(onClick = { newPlaylist = false }) { Text("Hủy") } })
+}
+
+@Composable
+internal fun MioLibraryTabs(active: String, select: (String) -> Unit) {
+    MioUnderlinedTabs(listOf("albums" to "Album", "songs" to "Bài hát",
+        "playlists" to "Playlist", "folders" to "Thư mục"), active, select)
+}
+
+@Composable
+internal fun MioAlbumRow(tile: @Composable (Int, Modifier) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = MioSpacing.gutter, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        repeat(2) { tile(it, Modifier.weight(1f)) }
+    }
 }
 
 @Composable
