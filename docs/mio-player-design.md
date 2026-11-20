@@ -21,3 +21,10 @@ Version 110 / 1.5.0 follows production version 108. Version 109 was used by the 
 - Added an artwork-first modern player with separate queue and Audio Lab sheets.
 - Grouped existing settings under Appearance, Playback, Audio, Library, Updates and About.
 - Retained the retro display IDs and persisted colors with original palette names.
+
+## Host previews
+
+The previews render Compose with fixture metadata on Robolectric API 35 and native Skia. Device and hardware audio validation are separate release checks.
+
+- [Modern Now Playing in dark mode](mio-previews/now-playing-dark.png)
+- [Audio Lab signal view in light mode](mio-previews/audio-lab-light.png)
