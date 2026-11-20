@@ -1,0 +1,20 @@
+{
+  "stage": "11",
+  "offline": true,
+  "command": [
+    ":playback:hostNative",
+    ":app:assembleRelease",
+    ":core:test",
+    ":library:testDebugUnitTest",
+    ":playback:testDebugUnitTest",
+    ":app:testDebugUnitTest",
+    ":app:assembleReview",
+    ":app:lintReview",
+    ":app:lintRelease",
+    ":library:lintRelease",
+    ":playback:lintRelease"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 1009.13,
+  "log": "stage11-gate.log"
+}

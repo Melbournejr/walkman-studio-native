@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.walkmanstudio.nativeplayer.playback.UsbAudioRouteTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-06T10:00:08.929Z" hostname="125101879e7f" time="1.562">
+  <properties/>
+  <testcase name="structuredRouteAndDecoderEventsSurviveExportBufferWithoutTruncation" classname="com.walkmanstudio.nativeplayer.playback.UsbAudioRouteTest" time="0.279"/>
+  <testcase name="decoderLogDistinguishesSource24FromDecoder16WithoutChangingFormat" classname="com.walkmanstudio.nativeplayer.playback.UsbAudioRouteTest" time="0.141"/>
+  <testcase name="flacStreamInfoReportsSourceBitDepthAndMalformedHeadersStayUnknown" classname="com.walkmanstudio.nativeplayer.playback.UsbAudioRouteTest" time="0.151"/>
+  <testcase name="routeMeasuresActualTrackAndCleansUpUnsupportedHostWithoutEnabling" classname="com.walkmanstudio.nativeplayer.playback.UsbAudioRouteTest" time="0.983"/>
+  <system-out><![CDATA[log_fixture: currentFilesDir=/tmp/robolectric-UsbAudioRouteTest_structuredRouteAndDecoderEventsSurviveExportBufferWithoutTruncation7074693690594636209/com.walkmanstudio.nativeplayer.playback.test-dataDir/files; retainedFile=/tmp/robolectric-PlaybackTest_lifecycleLogIsBoundedValidJsonAndPersistedOffMain10895516567392018141/com.walkmanstudio.nativeplayer.playback.test-dataDir/files/playback-events.jsonl; sameDirectory=false
+log_fixture: currentFilesDir=/tmp/robolectric-UsbAudioRouteTest_decoderLogDistinguishesSource24FromDecoder16WithoutChangingFormat6502304423110834124/com.walkmanstudio.nativeplayer.playback.test-dataDir/files; retainedFile=null; sameDirectory=false
+log_fixture: currentFilesDir=/tmp/robolectric-UsbAudioRouteTest_flacStreamInfoReportsSourceBitDepthAndMalformedHeadersStayUnknown14754243216980838071/com.walkmanstudio.nativeplayer.playback.test-dataDir/files; retainedFile=null; sameDirectory=false
+log_fixture: currentFilesDir=/tmp/robolectric-UsbAudioRouteTest_routeMeasuresActualTrackAndCleansUpUnsupportedHostWithoutEnabling15212312004842957854/com.walkmanstudio.nativeplayer.playback.test-dataDir/files; retainedFile=null; sameDirectory=false
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

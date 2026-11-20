@@ -1,0 +1,51 @@
+{
+  "apk": "walkman-native-stage11.apk",
+  "bytes": 4141597,
+  "sha256": "0771ab03c70cc6b63544008933fda3079cfc04514769192bc10140b1e97423da",
+  "applicationId": "com.walkmanstudio.nativeplayer",
+  "versionName": "1.3.1-native-usb",
+  "versionCode": 107,
+  "minSdk": 26,
+  "targetSdk": 35,
+  "variant": "review (release/R8 config, debuggable=false)",
+  "signature": "existing build-environment install/test key; NOT user release key",
+  "certificateSha256": "2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2",
+  "previousCertificateSha256": "2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2",
+  "updatesDeliveredStage7Signer": true,
+  "apkV2Verified": true,
+  "zip16KiBVerified": true,
+  "elfLoadAlignments": {
+    "lib/arm64-v8a/libandroidx.graphics.path.so": [
+      16384,
+      16384,
+      16384
+    ],
+    "lib/arm64-v8a/libwalkman_dsd.so": [
+      16384,
+      16384,
+      16384
+    ],
+    "lib/x86_64/libandroidx.graphics.path.so": [
+      16384,
+      16384,
+      16384
+    ],
+    "lib/x86_64/libwalkman_dsd.so": [
+      16384,
+      16384,
+      16384
+    ]
+  },
+  "forbiddenPermissionsAbsent": true,
+  "nativeJniNamePreserved": true,
+  "nativeMethodsVerified": [
+    "create",
+    "decodeNative",
+    "destroy"
+  ],
+  "notVerified": [
+    "installation/audio on physical Android",
+    "user keystore signing",
+    "16KiB-kernel execution"
+  ]
+}
