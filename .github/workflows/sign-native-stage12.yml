@@ -66,6 +66,13 @@ jobs:
           keystore="$(mktemp "$RUNNER_TEMP/walkman-keystore.XXXXXXXX")"
           trap 'rm -f -- "$keystore"' EXIT
           printf '%s' "$WALKMAN_SIGNING_KEYSTORE_B64" | base64 --decode > "$keystore"
+          expected=2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2
+          certificate="$(keytool -exportcert -keystore "$keystore" \
+            -alias "$WALKMAN_SIGNING_KEY_ALIAS" -storepass:env WALKMAN_SIGNING_STORE_PASSWORD | sha256sum)"
+          if [[ "${certificate%% *}" != "$expected" ]]; then
+            echo 'The supplied signing entry does not match the Stage 11 certificate.' >&2
+            exit 1
+          fi
           tools="$ANDROID_HOME/build-tools/35.0.0"
           unsigned=app/build/outputs/apk/release/app-release-unsigned.apk
           "$tools/zipalign" -c -P 16 4 "$unsigned"
