@@ -248,7 +248,7 @@ private fun NaturalPortraitDeckLayout(
         val groupHeight = topPlaceable.height + casePlaceable.height + informationPlaceable.height + bottomPlaceable.height
         // All controls belong to one compact device group. Extra background from
         // the physical tape ratio stays outside, never between device and controls.
-        val groupTop = (height - groupHeight).coerceAtLeast(0) / 2
+        val groupTop = ((height - groupHeight).coerceAtLeast(0) / 2).coerceAtMost(40.dp.roundToPx())
         layout(width, height) {
             topPlaceable.placeRelative(0, groupTop)
             val caseTop = groupTop + topPlaceable.height
