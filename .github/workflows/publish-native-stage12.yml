@@ -30,6 +30,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Provision the APK verification SDK
+        run: bash .github/scripts/setup-android-sdk.sh publish
       - name: Reconstruct and verify the signed OTA assets
         env:
           BACKED_UP_CERTIFICATE: ${{ vars.WALKMAN_BACKED_UP_CERTIFICATE_SHA256 }}
@@ -37,7 +39,6 @@ jobs:
           expected="$(python3 qa/production_policy.py certificateSha256)"
           [[ "$BACKED_UP_CERTIFICATE" == "$expected" ]]
           tools="$ANDROID_HOME/build-tools/35.0.0"
-          if [ ! -x "$tools/apksigner" ]; then sdkmanager 'build-tools;35.0.0'; fi
           python3 qa/verify-audio-engine-distribution.py "$tools" "$RUNNER_TEMP/stage12"
       - name: Publish the reviewed release
         env:
