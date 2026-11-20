@@ -21,21 +21,18 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+      - name: Provision the Android build SDK
+        run: bash .github/scripts/setup-android-sdk.sh build
       - name: Build and verify the reviewed source
         run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64"
-          export PATH="$JAVA_HOME/bin:$PATH"
           python3 -m unittest discover -s qa -p test_production_policy.py
           python3 qa/production_policy.py certificateSha256
-          sdkmanager --channel=3 'platforms;android-36' 'build-tools;35.0.0' 'ndk;30.0.16248370' 'cmake;3.22.1'
           ./gradlew --console=plain --max-workers=2 \
             :core:test :playback:hostNative :library:testDebugUnitTest \
             :playback:testDebugUnitTest :app:testDebugUnitTest :app:assembleRelease \
             :app:lintRelease :library:lintRelease :playback:lintRelease
       - name: Save release inputs and build the first-release OTA probe
         run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64"
-          export PATH="$JAVA_HOME/bin:$PATH"
           inputs="$RUNNER_TEMP/production-signing-input"
           mkdir -p "$inputs"
           cp app/build/outputs/apk/release/app-release-unsigned.apk "$inputs/release.apk"
@@ -65,8 +62,8 @@ jobs:
         with:
           name: production-signing-input
           path: ${{ runner.temp }}/production-signing-input
-      - name: Install APK verification tools
-        run: sdkmanager --channel=3 'build-tools;35.0.0' 'ndk;30.0.16248370'
+      - name: Provision the APK signing and verification SDK
+        run: bash .github/scripts/setup-android-sdk.sh sign
       - name: Sign using the reviewed production key
         env:
           BACKED_UP_CERTIFICATE: ${{ vars.WALKMAN_BACKED_UP_CERTIFICATE_SHA256 }}
@@ -114,8 +111,6 @@ jobs:
           fi
       - name: Verify continuity and prepare the reviewed distribution
         run: |
-          export JAVA_HOME="$JAVA_HOME_21_X64"
-          export PATH="$JAVA_HOME/bin:$PATH"
           mkdir -p app/build/outputs/mapping/release
           cp "$RUNNER_TEMP/production-signing-input/mapping.txt" app/build/outputs/mapping/release/mapping.txt
           python3 qa/prepare-audio-engine-ota.py "$RUNNER_TEMP/stage12-signed.apk" "$RUNNER_TEMP/stage12-staged"
