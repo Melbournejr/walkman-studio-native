@@ -81,6 +81,8 @@ internal class UsbAudioRoute(
     private var decodedFormat: Format? = null
     private var inputFormat: Format? = null
     private var trackId: String? = null
+    private var deviceName: String? = null
+    private var decoderMatchesTrack: Boolean? = null
     private var closed = false
     private var requested = preferences.getBoolean("enabled", false)
     // Gain changes affect queued DSD blocks too; never confirm until a fresh zero-gain track.
@@ -151,6 +153,10 @@ internal class UsbAudioRoute(
             ActualPcm(PcmFormat(audio.sampleRate, kind, audio.channelCount), routed?.id, routed?.let { isUsb(it.type) } == true, trackVolume, trackBypassesDsp)
         } }
         val before = status
+        val previousDeviceName = deviceName
+        val previousMatch = decoderMatchesTrack
+        deviceName = routed?.productName?.toString()
+        decoderMatchesTrack = decoded?.format?.let { format -> actual?.format?.let { it == format } }
         status = session?.evaluate(Build.VERSION.SDK_INT, requested, outputs.map { UsbEndpoint(it.id, isUsb(it.type)) },
             decoded, actual, direct(), if (dsdBufferedGain && decoded?.fromDsd == true) 1 else dsdGain())
             ?: UsbMixerStatus(false, requested, false, "Cần Android 14 trở lên")
@@ -164,10 +170,11 @@ internal class UsbAudioRoute(
                     .put("encoding", audio.audioFormat).put("channelCount", audio.channelCount)
                     .put("performanceMode", audio.performanceMode).put("audioSessionId", audio.audioSessionId)
                     .put("volume", trackVolume).put("bypassesDsp", trackBypassesDsp) } ?: JSONObject.NULL)
-                .put("requested", requested).put("confirmed", status.verified).put("statusReason", status.reason)
+                .put("decoderMatchesAudioTrack", decoderMatchesTrack ?: JSONObject.NULL)
+                .put("requested", requested).put("mixerConfirmed", status.verified).put("hardwareBitPerfectVerified", false).put("statusReason", status.reason)
             log.record("output_route", event)
         }
-        if (before != status) handler.post { changed() }
+        if (before != status || previousDeviceName != deviceName || previousMatch != decoderMatchesTrack) handler.post { changed() }
     }
     @Synchronized fun close() {
         session?.release()
@@ -176,6 +183,11 @@ internal class UsbAudioRoute(
         if (Build.VERSION.SDK_INT >= 34) api?.close()
         closed = true
         log.record("output_route", JSONObject().put("reason", "service_stopped_cleanup").put("apiLevel", Build.VERSION.SDK_INT))
+    }
+    @Synchronized fun addOutputDiagnostics(extras: android.os.Bundle) {
+        extras.putString("outputDevice", deviceName)
+        decoderMatchesTrack?.let { extras.putBoolean("decoderMatchesAudioTrack", it) }
+        track?.let { extras.putBoolean("dspBypassActive", trackBypassesDsp) }
     }
     @Synchronized fun outputDescription(): String? = track?.let {
         val name = when (pcmKind(it.audioFormat)) {

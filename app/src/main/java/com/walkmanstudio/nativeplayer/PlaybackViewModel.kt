@@ -36,7 +36,8 @@ import kotlinx.coroutines.withContext
 
 data class SignalUi(val source:String="Chưa có nguồn",val decoded:String="Chưa có PCM",val output:String="Chưa đo được ngõ ra",val decoder:String="",val gainDb:Double=0.0,val clipped:Long=0,val dsdOverFullScaleSamples:Long=0,
     val sourceMime:String?=null,val sourceRate:Int?=null,val sourcePcmEncoding:Int?=null,
-    val averageBitrate:Int?=null,val peakBitrate:Int?=null,val sourceDsdMultiplier:Int?=null,val usbStatus:String?=null)
+    val averageBitrate:Int?=null,val peakBitrate:Int?=null,val sourceDsdMultiplier:Int?=null,val usbStatus:String?=null,
+    val outputDevice:String?=null,val decoderMatchesAudioTrack:Boolean?=null,val dspBypassActive:Boolean?=null)
 
 data class UsbSettingsUi(val available:Boolean=false,val requested:Boolean=false,val verified:Boolean=false,
     val connected:Boolean=false,val warningAccepted:Boolean=false,val reason:String="Đang chờ thông tin thiết bị")
@@ -114,7 +115,10 @@ class PlaybackViewModel(context: Context) : ViewModel() {
             sourceMime=format?.sampleMimeType,sourceRate=format?.sampleRate?.takeIf { it>0 },sourcePcmEncoding=format?.pcmEncoding,
             averageBitrate=format?.averageBitrate?.takeIf { it>0 },peakBitrate=format?.peakBitrate?.takeIf { it>0 },
             sourceDsdMultiplier=format?.let { CassetteSignal.dsdMultiplier(it.id,it.sampleMimeType,it.labels.map { label -> label.value }) },
-            usbStatus=if(usb.value.connected) if(usb.value.verified) "Bit-perfect USB" else "USB · Mixer hệ thống" else null)
+            usbStatus=if(usb.value.connected) if(usb.value.verified) "USB · Đã khớp mixer" else "USB · Mixer hệ thống" else null,
+            outputDevice=extra.getString("outputDevice"),
+            decoderMatchesAudioTrack=if(extra.containsKey("decoderMatchesAudioTrack")) extra.getBoolean("decoderMatchesAudioTrack") else null,
+            dspBypassActive=if(extra.containsKey("dspBypassActive")) extra.getBoolean("dspBypassActive") else null)
         val error = player.playerError
         val id = player.currentMediaItem?.mediaId
         currentId.value = id?.toLongOrNull()

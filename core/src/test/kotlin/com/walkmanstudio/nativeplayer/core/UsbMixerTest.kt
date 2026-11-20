@@ -66,7 +66,7 @@ class UsbMixerTest {
             val status=UsbMixerSession(access).evaluate(34,true,usb,DecodedPcm(fmt()),actual,direct,0)
             val expected=preferred && created && routed && direct
             assertEquals("preferred=$preferred created=$created routed=$routed direct=$direct",expected,status.verified)
-            assertEquals(if(expected)"Bit-perfect USB" else "USB · Mixer hệ thống",status.label)
+            assertEquals(if(expected)"USB · Đã khớp mixer" else "USB · Mixer hệ thống",status.label)
         }
     }
     @Test fun mismatchedActualRateEncodingChannelsAndDuckNeverConfirm() {

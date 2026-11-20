@@ -37,7 +37,7 @@ data class UsbEndpoint(val id: Int, val usb: Boolean)
 data class ActualPcm(val format: PcmFormat, val deviceId: Int?, val usb: Boolean, val volume: Float,
     val bypassesDsp: Boolean = true)
 data class UsbMixerStatus(val available: Boolean, val requested: Boolean, val verified: Boolean, val reason: String) {
-    val label: String get() = if (verified) "Bit-perfect USB" else "USB · Mixer hệ thống"
+    val label: String get() = if (verified) "USB · Đã khớp mixer" else "USB · Mixer hệ thống"
 }
 interface MixerAccess {
     fun supported(deviceId: Int): List<MixerOption>
