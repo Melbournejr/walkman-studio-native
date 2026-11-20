@@ -25,8 +25,8 @@ val StudioLight = lightColorScheme(
     primaryContainer = Color(0xFFF1DEBD), onPrimaryContainer = Color(0xFF32230E),
     secondary = Color(0xFF4B5D70), onSecondary = Color.White,
     secondaryContainer = Color(0xFFE0E7EE), onSecondaryContainer = Color(0xFF202D39),
-    background = Color(0xFFF8F6F2), onBackground = Color(0xFF1D242D),
-    surface = Color(0xFFF8F6F2), onSurface = Color(0xFF1D242D),
+    background = Color(0xFFF4F0E9), onBackground = Color(0xFF1D242D),
+    surface = Color(0xFFF4F0E9), onSurface = Color(0xFF1D242D),
     surfaceVariant = Color(0xFFE9E6E0), onSurfaceVariant = Color(0xFF4C5967),
     surfaceContainerLow = Color(0xFFF4F1EA), surfaceContainer = Color(0xFFEDEAE4),
     surfaceContainerHigh = Color(0xFFE8E5DF), surfaceContainerHighest = Color(0xFFE2DED6),
@@ -34,15 +34,15 @@ val StudioLight = lightColorScheme(
 )
 
 val StudioDark = darkColorScheme(
-    primary = Color(0xFFC9A875), onPrimary = Color(0xFF261B0D),
+    primary = Color(0xFFD9B77A), onPrimary = Color(0xFF261B0D),
     primaryContainer = Color(0xFF423321), onPrimaryContainer = Color(0xFFF0D8B2),
     secondary = Color(0xFFB8C5D3), onSecondary = Color(0xFF232E3A),
     secondaryContainer = Color(0xFF2B3642), onSecondaryContainer = Color(0xFFD9E4EF),
-    background = Color(0xFF11151B), onBackground = Color(0xFFF3F5F7),
-    surface = Color(0xFF11151B), onSurface = Color(0xFFF3F5F7),
-    surfaceVariant = Color(0xFF29333E), onSurfaceVariant = Color(0xFF9DAAB9),
-    surfaceContainerLowest = Color(0xFF0D1117), surfaceContainerLow = Color(0xFF191E26),
-    surfaceContainer = Color(0xFF20262E), surfaceContainerHigh = Color(0xFF262E38),
+    background = Color(0xFF0B0F14), onBackground = Color(0xFFF5F6F7),
+    surface = Color(0xFF0B0F14), onSurface = Color(0xFFF5F6F7),
+    surfaceVariant = Color(0xFF29333E), onSurfaceVariant = Color(0xFFA9B4C2),
+    surfaceContainerLowest = Color(0xFF0D1117), surfaceContainerLow = Color(0xFF151B24),
+    surfaceContainer = Color(0xFF1A222C), surfaceContainerHigh = Color(0xFF232B35),
     surfaceContainerHighest = Color(0xFF303A45),
     outline = Color(0xFF8B98A8), outlineVariant = Color(0xFF39434F),
 )

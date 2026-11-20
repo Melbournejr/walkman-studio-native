@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -39,13 +40,14 @@ internal fun MioNavigation(active: MioDestination, select: (MioDestination) -> U
                 val selected = item == active
                 val ink = if (selected) colors.primary else colors.onSurfaceVariant
                 Column(
-                    Modifier.weight(1f).heightIn(min = 60.dp)
+                    Modifier.weight(1f).heightIn(min = 62.dp)
                         .selectable(selected, role = Role.Tab, onClick = { select(item) }).padding(vertical = 9.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     CompositionLocalProviderInk(ink) { StudioIcon(item.icon, modifier = Modifier.size(20.dp)) }
-                    Text(item.label, color = ink, style = MaterialTheme.typography.labelSmall, maxLines = 2)
+                    Text(item.label, color = ink, style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, maxLines = 2)
                 }
             }
         }

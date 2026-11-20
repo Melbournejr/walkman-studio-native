@@ -24,10 +24,10 @@ import com.walkmanstudio.nativeplayer.core.*
 import java.util.Locale
 
 @Composable
-fun SignalAndDsp(model: PlaybackViewModel) {
+fun SignalAndDsp(model: PlaybackViewModel, showSourceDirect: Boolean = true) {
     val config by model.dsp.collectAsStateWithLifecycle()
     Column(Modifier.fillMaxWidth(), verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth().heightIn(min=64.dp),verticalAlignment=Alignment.CenterVertically) {
+        if (showSourceDirect) Row(Modifier.fillMaxWidth().heightIn(min=64.dp),verticalAlignment=Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) { Text("Source Direct",style=MaterialTheme.typography.titleMedium);Text("Bỏ qua EQ, Clear Bass, ReplayGain, limiter, dither và bù mức DSD.",fontSize=13.sp) }
             Switch(checked=config.sourceDirect,onCheckedChange={model.setDsp(config.copy(sourceDirect=it))},modifier=Modifier.semantics{contentDescription="Source Direct"})
         }
@@ -83,12 +83,18 @@ internal fun AudioLab(model: PlaybackViewModel) {
     val usb by model.usb.collectAsStateWithLifecycle()
     var section by remember { mutableStateOf<MioAudioSection?>(null) }
     MioAudioOverview(signal, track?.mimeType, config, usb, select = { section = it })
-    section?.let { selected ->
+    if (section == MioAudioSection.EQ) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { section = null },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            MioEqualizer(config, { section = null }, model::setDsp) { SignalAndDsp(model, showSourceDirect = false) }
+        }
+    }
+    section?.takeUnless { it == MioAudioSection.EQ }?.let { selected ->
         AlertDialog(onDismissRequest = { section = null }, title = { Text(selected.label) },
             text = {
                 Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
                     when (selected) {
-                        MioAudioSection.EQ -> SignalAndDsp(model)
+                        MioAudioSection.EQ -> Unit
                         MioAudioSection.GAIN -> MioReplayGain(model)
                         MioAudioSection.DSD -> Stage8AudioSettings(model)
                         MioAudioSection.USB -> {
@@ -136,12 +142,12 @@ internal fun MioSignalPath(signal: SignalUi, mime: String?, sourceDirect: Boolea
         .drawBehind {
             val axis = 19.dp.toPx()
             val start = 52.dp.toPx()
-            drawLine(colors.outlineVariant, Offset(axis, start), Offset(axis, (size.height - 24.dp.toPx()).coerceAtLeast(start)))
+            drawLine(colors.primary.copy(alpha = .5f), Offset(axis, start), Offset(axis, (size.height - 24.dp.toPx()).coerceAtLeast(start)))
         },
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Đường tín hiệu", style = MaterialTheme.typography.titleMedium)
         SignalStage(R.drawable.ic_mio_note, "Nguồn", signal.source, mime)
-        SignalStage(R.drawable.ic_play, "Giải mã", signal.decoded, signal.decoder)
+        SignalStage(R.drawable.ic_audio_controls, "Giải mã", signal.decoded, signal.decoder)
         val processing = when {
             signal.dspBypassActive == true -> "AudioTrack xác nhận đường bỏ qua DSP"
             sourceDirect -> "Đã chọn Source Direct"

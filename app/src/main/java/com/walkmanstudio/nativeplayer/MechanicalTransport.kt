@@ -82,12 +82,17 @@ internal fun MechanicalTransport(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    onStop: (() -> Unit)? = null,
 ) {
     val playLatched = CassetteKeyModel.latched(playWhenReady, playbackState)
     Row(modifier.heightIn(min = 64.dp).testTag("mechanical-keys"),
         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         MechanicalKey(theme, R.drawable.ic_previous, "Bài trước", false, animationsEnabled, onPrevious,
             Modifier.weight(1f).height(64.dp).widthIn(min = 56.dp).testTag("mechanical-previous"))
+        onStop?.let {
+            MechanicalKey(theme, R.drawable.ic_mio_stop, "Dừng phát", false, animationsEnabled, it,
+                Modifier.weight(1f).height(64.dp))
+        }
         MechanicalKey(theme, if (playLatched) R.drawable.ic_pause else R.drawable.ic_play,
             if (playLatched) "Tạm dừng" else "Phát", playLatched, animationsEnabled, onToggle,
             Modifier.weight(1f).height(64.dp).widthIn(min = 64.dp).testTag("mechanical-play"), isPlay = true)
@@ -160,7 +165,8 @@ private fun MechanicalKey(
             drawRoundRect(Brush.verticalGradient(listOf(
                 lerp(theme.face, Color.Black, .42f), lerp(theme.face, Color.Black, .68f))),
                 origin + Offset(0f, thickness), face, corner)
-            val surface = lerp(theme.face, Color.Black, amount * .13f)
+            val studioLatch = theme == WalkmanTheme.MIO && isPlay && latched
+            val surface = lerp(if (studioLatch) theme.accent else theme.face, Color.Black, amount * .13f)
             drawRoundRect(Brush.linearGradient(listOf(
                 lerp(surface, Color.White, .15f - amount * .06f), surface,
                 lerp(surface, Color.Black, .12f)), origin, origin + Offset(face.width, face.height)),
@@ -180,7 +186,7 @@ private fun MechanicalKey(
             translationY = amount * CassetteKeyModel.DEPRESSION_DP.dp.toPx()
         }, contentAlignment = Alignment.Center) {
             Icon(painterResource(icon), contentDescription = null,
-                modifier = Modifier.size(if (isPlay) 30.dp else 26.dp), tint = theme.ink)
+                modifier = Modifier.size(if (isPlay) 30.dp else 26.dp), tint = if (theme == WalkmanTheme.MIO && isPlay && latched) theme.body else theme.ink)
         }
     }
 }

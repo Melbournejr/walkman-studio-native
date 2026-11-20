@@ -2,6 +2,8 @@
 package com.walkmanstudio.nativeplayer
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -26,15 +29,20 @@ internal fun MioNowPlaying(
     actions: CassetteActions,
     favorite: Boolean = false,
     canFavorite: Boolean = false,
+    highResolutionSource: Boolean = false,
     artwork: @Composable (Modifier) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= 640.dp
+        val portraitHeight = maxHeight
         val coverWidth = if (wide) minOf((maxWidth - 88.dp) / 2, 440.dp)
-            else minOf(maxWidth - 56.dp, maxHeight * .57f, 440.dp).coerceAtLeast(96.dp)
+            else minOf(maxWidth - 48.dp, maxHeight * .54f, 440.dp).coerceAtLeast(96.dp)
         val controls: @Composable () -> Unit = {
-            Column(Modifier.width(coverWidth), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            val panelHeight = if (wide || state.id == null) 0.dp
+                else (portraitHeight - coverWidth - 32.dp).coerceAtMost(332.dp).coerceAtLeast(0.dp)
+            Column(Modifier.width(coverWidth).heightIn(min = panelHeight),
+                verticalArrangement = if (panelHeight >= 300.dp) Arrangement.SpaceBetween else Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(state.title.ifBlank { "Chưa chọn bài" }, style = MaterialTheme.typography.titleLarge,
@@ -60,8 +68,8 @@ internal fun MioNowPlaying(
                             StudioIcon(R.drawable.ic_shuffle, "Phát ngẫu nhiên", Modifier.size(20.dp))
                         }
                         IconButton(onClick = actions.previous) { StudioIcon(R.drawable.ic_previous, "Bài trước", Modifier.size(22.dp)) }
-                        OutlinedIconButton(onClick = actions.toggle, modifier = Modifier.size(56.dp),
-                            border = BorderStroke(1.dp, colors.primary)) {
+                        OutlinedIconButton(onClick = actions.toggle, modifier = Modifier.size(68.dp),
+                            border = BorderStroke(1.5.dp, colors.primary)) {
                             StudioIcon(if (state.requested) R.drawable.ic_pause else R.drawable.ic_play,
                                 if (state.requested) "Tạm dừng" else "Phát", Modifier.size(27.dp))
                         }
@@ -83,7 +91,7 @@ internal fun MioNowPlaying(
                     if (specs.isNotEmpty()) {
                         Surface(color = colors.surfaceContainerLow, shape = RoundedCornerShape(8.dp),
                             border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = .5f))) {
-                            Text(specs.take(3).joinToString(" · "), Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            Text(specs.take(3).joinToString("  |  "), Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                 style = MaterialTheme.typography.labelMedium)
                         }
                     }
@@ -104,9 +112,20 @@ internal fun MioNowPlaying(
                 controls()
             }
         } else {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                artwork(Modifier.size(coverWidth))
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+                colors.background, colors.background, colors.primary.copy(alpha = .035f).compositeOver(colors.background))))
+                .verticalScroll(rememberScrollState()).heightIn(min = portraitHeight).padding(top = 12.dp, bottom = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)) {
+                Box(Modifier.size(coverWidth)) {
+                    artwork(Modifier.matchParentSize())
+                    if (highResolutionSource) Surface(
+                        Modifier.align(Alignment.TopEnd).padding(12.dp), color = colors.background,
+                        shape = RoundedCornerShape(4.dp), border = BorderStroke(1.dp, colors.primary),
+                    ) {
+                        Text("Hi-Res", Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                            color = colors.primary, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
                 controls()
             }
         }
@@ -124,14 +143,14 @@ private fun MioSeekBar(state: PlaybackUi, seek: (Long) -> Unit) {
     Column {
         Box(Modifier.fillMaxWidth().heightIn(min = MioSpacing.touch), contentAlignment = Alignment.Center) {
             Canvas(Modifier.matchParentSize()) {
-                val inset = 10.dp.toPx()
+                val inset = 6.dp.toPx()
                 val y = center.y
                 val x = inset + (size.width - inset * 2) * value
                 drawLine(colors.outline.copy(alpha = .5f), Offset(inset, y), Offset(size.width - inset, y),
                     strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
                 if (value > 0f) drawLine(colors.primary, Offset(inset, y), Offset(x, y),
                     strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
-                drawCircle(colors.onSurface, 5.dp.toPx(), Offset(x, y))
+                drawCircle(colors.primary, 6.dp.toPx(), Offset(x, y))
             }
             Slider(value = value, onValueChange = { dragging = it }, enabled = state.seekEnabled,
                 onValueChangeFinished = {

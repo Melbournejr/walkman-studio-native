@@ -5,8 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import com.walkmanstudio.nativeplayer.library.TrackEntity
+import com.walkmanstudio.nativeplayer.library.LibraryDatabase
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun StudioIcon(@DrawableRes icon: Int, description: String? = null, modifier: Modifier = Modifier) {
@@ -39,9 +42,12 @@ fun PlaybackPanel(model: PlaybackViewModel, artwork: Modifier = Modifier, open: 
 internal fun MioMiniPlayer(state: PlaybackUi, open: () -> Unit, toggle: () -> Unit,
     next: () -> Unit, cover: @Composable (Modifier) -> Unit) {
     if (state.id == null) return
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+    Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+        shape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f))) {
         Column {
-            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(onClickLabel = "Mở Đang phát", onClick = open).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(onClickLabel = "Mở Đang phát", onClick = open).padding(start = 10.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 cover(Modifier.size(44.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
@@ -84,7 +90,7 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
         favorite = { current?.let(favorite) }, queue = { sheetMode = "queue"; sheet = true },
         sound = { sheetMode = "sound"; sheet = true }, shuffle = model::toggleShuffle,
         repeat = model::repeatOne, seek = model::seek, retry = model::retry, details = { details = true },
-        close = close, palette = { displayMenu = true },
+        close = close, palette = { displayMenu = true }, stop = model::stopDeck,
     )
     val displayOptions: @Composable () -> Unit = {
         DropdownMenu(displayMenu, { displayMenu = false }) {
@@ -115,7 +121,8 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
         Box(Modifier.fillMaxSize().padding(padding)) {
             val specs = CassetteSignal.chips(signal, dsp.sourceDirect, !dsp.sourceDirect)
             if (mode == NowPlayingMode.CLASSIC) {
-                MioNowPlaying(state, specs, actions, favorite = current?.isFavorite == true, canFavorite = current != null) {
+                MioNowPlaying(state, specs, actions, favorite = current?.isFavorite == true, canFavorite = current != null,
+                    highResolutionSource = CassetteSignal.isHighResolutionSource(signal)) {
                     modifier -> TrackCover(track, artwork.then(modifier), large = true)
                 }
             } else {
@@ -133,25 +140,30 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
             }
         }
     }
-    if (sheet) ModalBottomSheet(onDismissRequest = { sheet = false }) {
+    if (sheet && sheetMode == "queue") {
+        BackHandler { sheet = false }
         val queue by model.queue.collectAsStateWithLifecycle()
-        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 640.dp).padding(horizontal = 16.dp)) {
-            item { Text(if(sheetMode=="queue") "Hàng đợi" else "Audio Lab", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(12.dp)) }
-            if(sheetMode=="sound") {
-                item { SystemVolumeButton() }
-                item { AudioLab(model) }
-                item { Text("Hẹn giờ ngủ",style=MaterialTheme.typography.titleMedium); FlowRow { listOf(0,15,30,60,90).forEach { minutes -> TextButton(onClick={model.sleep(minutes)}) {Text(if(minutes==0) "Tắt" else "$minutes′")} } } }
-            }
-            if (sheetMode == "queue" && queue.isEmpty()) item { Text("Hàng đợi đang trống.", Modifier.padding(vertical = 16.dp)) }
-            if (sheetMode == "queue") itemsIndexed(queue, key = { i, item -> "$i-${item.mediaId}" }) { index, item ->
-                Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable { model.queuePlay(index) }, verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(NowPlayingText.display(mediaTitle=item.mediaMetadata.title?.toString()).title, fontSize = 16.sp, color = if (item.mediaId == state.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, maxLines = 2)
-                        if(NowPlayingText.sanitize(item.mediaMetadata.artist?.toString()).isNotBlank()) Text(NowPlayingText.sanitize(item.mediaMetadata.artist?.toString()), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = { model.remove(index) }) { StudioIcon(R.drawable.ic_close, "Bỏ ${item.mediaMetadata.title} khỏi hàng đợi") }
+        val database = LibraryDatabase.getInstance(LocalContext.current.applicationContext)
+        val rows = remember(queue) { queue.map { item ->
+            MioQueueItem(item.mediaId, NowPlayingText.display(mediaTitle = item.mediaMetadata.title?.toString()).title,
+                NowPlayingText.sanitize(item.mediaMetadata.artist?.toString()))
+        } }
+        Surface(Modifier.fillMaxSize()) {
+            MioQueue(rows, state.queueIndex - 1, { sheet = false }, model::queuePlay, model::remove) { item, modifier ->
+                val source = remember(database, item.id) {
+                    item.id.toLongOrNull()?.let(database.libraryDao()::observeTrack) ?: flowOf(null)
                 }
+                val queuedTrack by source.collectAsStateWithLifecycle(initialValue = null)
+                TrackCover(queuedTrack, modifier)
             }
+        }
+    }
+    if (sheet && sheetMode == "sound") ModalBottomSheet(onDismissRequest = { sheet = false }) {
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 640.dp).padding(horizontal = 16.dp)) {
+            item { Text("Audio Lab", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(12.dp)) }
+            item { SystemVolumeButton() }
+            item { AudioLab(model) }
+            item { Text("Hẹn giờ ngủ",style=MaterialTheme.typography.titleMedium); FlowRow { listOf(0,15,30,60,90).forEach { minutes -> TextButton(onClick={model.sleep(minutes)}) {Text(if(minutes==0) "Tắt" else "$minutes′")} } } }
             item { Spacer(Modifier.height(32.dp)) }
         }
     }

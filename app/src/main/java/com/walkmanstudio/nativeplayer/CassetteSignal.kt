@@ -52,6 +52,10 @@ object CassetteSignal {
         signal.usbStatus?.let(::add)
     }
 
+    fun isHighResolutionSource(signal: SignalUi): Boolean =
+        signal.sourceMime in sourcePcmTypes && (signal.sourceRate ?: 0) > 48_000 &&
+            signal.sourcePcmEncoding in setOf(C.ENCODING_PCM_24BIT, C.ENCODING_PCM_32BIT, C.ENCODING_PCM_FLOAT)
+
     private fun pcmName(value:Int?):String? = when(value) {
         C.ENCODING_PCM_8BIT -> "8 bit"
         C.ENCODING_PCM_16BIT -> "16 bit"
