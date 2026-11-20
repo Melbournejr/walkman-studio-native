@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -41,6 +43,13 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
     val total by model.trackCount.collectAsStateWithLifecycle()
     val f by model.filter.collectAsStateWithLifecycle()
     val tab by model.tab.collectAsStateWithLifecycle()
+    val settingsSection by model.settingsSection.collectAsStateWithLifecycle()
+    val section = MioSettingsSection.fromSaved(settingsSection)
+    val libraryScroll = rememberLazyListState()
+    val settingsScroll = rememberLazyListState()
+    LaunchedEffect(tab, section) {
+        if (tab == "settings") settingsScroll.scrollToItem(0)
+    }
     val browser by model.browser.collectAsStateWithLifecycle()
     val appearance by model.appearance.collectAsStateWithLifecycle()
     val summary by model.summary.collectAsStateWithLifecycle()
@@ -59,7 +68,8 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
     var playlistTrack by remember { mutableStateOf<TrackEntity?>(null) }
     var newPlaylist by remember { mutableStateOf(false) }
     var playlistName by rememberSaveable { mutableStateOf("") }
-    val inCollection = f.album != null || f.playlist != null || (tab == "folders" && f.rootId != null)
+    val inCollection = tab != "settings" &&
+        (f.album != null || f.playlist != null || (tab == "folders" && f.rootId != null))
     val title = when (tab) {
         "settings" -> "Cài đặt"; "favorites" -> "Yêu thích"
         "folders" -> f.folder?.substringAfterLast('/')?.ifBlank { roots.firstOrNull { it.id == f.rootId }?.displayName } ?: "Thư mục"
@@ -71,73 +81,37 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
     SharedTransitionLayout {
         AnimatedContent(targetState = showNow, label = "mini-to-now-playing") { now ->
             val sharedArt = Modifier.sharedElement(rememberSharedContentState("current-artwork"), animatedVisibilityScope = this@AnimatedContent)
-            if (now) NowPlaying(playback,sharedArt,theme,displayMode,model::setWalkmanTheme, { track -> model.favorite(track) }) { model.showNowPlaying(false) }
+            if (now) NowPlaying(playback,sharedArt,theme,displayMode,model::setWalkmanTheme, model::setNowPlayingMode, { track -> model.favorite(track) }) { model.showNowPlaying(false) }
             else Scaffold(
-                topBar = { TopAppBar(title = { Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                topBar = { TopAppBar(title = {
+                    if (tab == "library" && !inCollection) Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
+                    else Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                },
                     navigationIcon = { if (inCollection) IconButton(onClick = model::back) { StudioIcon(R.drawable.ic_back, "Trở lại") } },
-                    actions = { IconButton(onClick = chooseTree, modifier = Modifier.semantics { contentDescription = "Thêm thư mục nhạc" }) { Text("+", fontSize = 28.sp) } }) },
+                    actions = { if (tab != "settings") IconButton(onClick = chooseTree) { StudioIcon(R.drawable.ic_add_folder, "Thêm thư mục nhạc") } }) },
                 bottomBar = { Column {
                     PlaybackPanel(playback, sharedArt) { model.showNowPlaying(true) }
-                    NavigationBar {
+                    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
                         listOf(Triple("library", "Thư viện", R.drawable.ic_library), Triple("folders", "Thư mục", R.drawable.ic_folder), Triple("favorites", "Yêu thích", R.drawable.ic_favorite), Triple("settings", "Cài đặt", R.drawable.ic_settings)).forEach { (value, label, icon) ->
                             NavigationBarItem(selected = tab == value, onClick = { model.selectTab(value) }, icon = { StudioIcon(icon) }, label = { Text(label, maxLines = 1) })
                         }
                     }
                 } }, snackbarHost = { SnackbarHost(snackbar) },
             ) { padding ->
-                LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+                LazyColumn(Modifier.fillMaxSize().padding(padding), state = if (tab == "settings") settingsScroll else libraryScroll, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
                     if (tab == "settings") {
-                        item { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Walkman Studio Native", style = MaterialTheme.typography.titleLarge)
-                            Text("${formatCount(total)} bài · Chỉ đọc nhạc trong thư mục bạn cấp quyền.")
-                            Text("Giao diện", style = MaterialTheme.typography.titleMedium)
-                            listOf("system" to "Theo hệ thống", "light" to "Sáng", "dark" to "Tối").forEach { (value, label) ->
-                                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { model.setAppearance(value) }, verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(selected = appearance == value, onClick = { model.setAppearance(value) }); Text(label)
-                                }
-                            }
-                            Text("Hiển thị Đang phát", style=MaterialTheme.typography.titleMedium)
-                            NowPlayingMode.entries.forEach { mode ->
-                                Row(Modifier.fillMaxWidth().heightIn(min=56.dp).clickable { model.setNowPlayingMode(mode) }, verticalAlignment=Alignment.CenterVertically) {
-                                    RadioButton(selected=displayMode==mode, onClick={model.setNowPlayingMode(mode)})
-                                    Text(mode.label, fontSize=16.sp)
-                                }
-                            }
-                            Text("Đồ họa dừng khi tạm dừng, chạy nền hoặc tắt màn hình. Tôn trọng mức hoạt ảnh của hệ thống.", fontSize=13.sp)
-                            Row(Modifier.fillMaxWidth().heightIn(min=64.dp), verticalAlignment=Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("Cassette luôn ngang", fontSize=16.sp)
-                                    Text("Chỉ khóa ngang khi đang mở Cassette. Rời màn này trả lại xoay theo hệ thống.", fontSize=13.sp)
-                                }
-                                Switch(checked=cassetteLandscape, onCheckedChange=model::setCassetteLandscape,
-                                    modifier=Modifier.semantics { contentDescription="Cassette luôn ngang" })
-                            }
-                            Text("Theme Walkman · chỉ ở Đang phát",style=MaterialTheme.typography.titleMedium)
-                            WalkmanTheme.entries.forEach { item ->
-                                Row(Modifier.fillMaxWidth().heightIn(min=56.dp).clickable { model.setWalkmanTheme(item) },verticalAlignment=Alignment.CenterVertically) {
-                                    RadioButton(selected=theme==item,onClick={model.setWalkmanTheme(item)})
-                                    Column {Text(item.model,fontSize=16.sp);Text(item.year.toString(),fontSize=13.sp)}
-                                }
-                            }
-                            Stage8AudioSettings(playback)
-                            UsbOutputSettings(playback)
-                            com.walkmanstudio.nativeplayer.update.UpdateSettings(updates)
-                            Text("Phiên bản ${BuildConfig.VERSION_NAME}",style=MaterialTheme.typography.bodyMedium)
-                            Text("MP3 / FLAC / WAV / AAC / Ogg: decoder thiết bị. DSF / DFF không nén DSD64–256 → PCM88,2kHz. Chưa hỗ trợ DST, DSD512, SACD ISO, DoP.",style=MaterialTheme.typography.bodyMedium)
-                            OutlinedButton(onClick = showDeviceHelp, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Hướng dẫn Xiaomi / HyperOS") }
-                            OutlinedButton(onClick = exportLog, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Xuất log trình phát") }
-                            Text("Mạng chỉ dùng để cập nhật từ GitHub. Tệp nhạc gốc không bị sửa hoặc sao chép. GPL-3.0-or-later.", style = MaterialTheme.typography.bodyMedium)
-                        } }
+                        item { MioSettingsTabs(section, model::openSettings) }
+                        item(key = section.name) {
+                            MioSettingsContent(section, model, playback, updates, appearance, displayMode, theme,
+                                cassetteLandscape, total, showDeviceHelp, exportLog, chooseTree)
+                        }
                     } else if (tab == "folders" && f.rootId == null) {
                         items(roots, key = { "root-${it.id}" }) { root -> RootCard(root, scans.firstOrNull { it.rootId == root.id },
                             { model.openFolder(root.id) }, { model.rescan(root.id) }, { model.rescan(root.id, true) }, { model.cancel(root.id) }, { removeRootId = root.id }, chooseTree) }
                         item { TextButton(onClick = chooseTree, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Thêm thư mục nhạc") } }
                     } else {
-                        if (roots.isEmpty()) item { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Thêm thư mục nhạc", style = MaterialTheme.typography.titleLarge)
-                            Text("Chọn thư mục trong bộ nhớ máy. Ứng dụng đọc trực tiếp tệp gốc.")
-                            TextButton(onClick = chooseTree, modifier = Modifier.heightIn(min = 48.dp)) { Text("Chọn thư mục") }
-                        } }
+                        if (roots.isEmpty() && browser != "playlists") item { MioLibraryEmpty(chooseTree) }
                         if (tab == "library" && !inCollection) item {
                             LazyRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 items(listOf("songs" to "Bài hát", "albums" to "Album", "playlists" to "Playlist")) { (value, label) -> FilterChip(selected = browser == value, onClick = { model.browse(value) }, label = { Text(label) }, modifier = Modifier.heightIn(min = 48.dp)) }
@@ -147,13 +121,15 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                         items(scans.filter { it.running || it.state == "PERMISSION_LOST" }, key = { "scan-${it.rootId}" }) { status -> ScanCard(roots.firstOrNull { it.id == status.rootId }?.displayName ?: "Thư mục", status, { model.cancel(status.rootId) }, chooseTree) }
                         if (tab == "library" && browser == "albums" && !inCollection) {
                             items(albums.itemCount, key = albums.itemKey { "${it.artist}|${it.album}" }) { index -> albums[index]?.let { album ->
-                                Row(Modifier.fillMaxWidth().clickable { model.openAlbum(album) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    AlbumCover(album.coverKey, "${album.artist}|${album.album}", Modifier.size(96.dp))
-                                    Column(Modifier.weight(1f).padding(start = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Text(album.album, fontSize = 18.sp); Text(album.artist.ifBlank { "Không có tag nghệ sĩ" }, fontSize = 13.sp)
-                                        Text("${formatCount(album.count)} bài · ${clockTime(album.duration)}", fontSize = 13.sp)
-                                    }
-                                }
+                                ListItem(
+                                    headlineContent = { Text(album.album, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                                    supportingContent = { Column {
+                                        Text(album.artist.ifBlank { "Không có tag nghệ sĩ" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text("${formatCount(album.count)} bài · ${clockTime(album.duration)}")
+                                    } },
+                                    leadingContent = { AlbumCover(album.coverKey, "${album.artist}|${album.album}", Modifier.size(76.dp)) },
+                                    modifier = Modifier.clickable(onClickLabel = "Mở album") { model.openAlbum(album) },
+                                )
                             } }
                             if (albums.loadState.refresh is LoadState.NotLoading && albums.itemCount == 0) item { Text("Chưa có album từ tag. Xem Bài hát hoặc Thư mục.", Modifier.padding(20.dp)) }
                             if (albums.loadState.refresh is LoadState.Error) item { TextButton(onClick = albums::retry) { Text("Thử đọc lại album") } }
@@ -167,13 +143,13 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                                         DropdownMenu(menu, { menu = false }) { DropdownMenuItem(text = { Text("Xóa playlist") }, onClick = { model.deletePlaylist(playlist.id); menu = false }) }
                                     } }, modifier = Modifier.heightIn(min = 64.dp).clickable { model.openPlaylist(playlist.id) })
                             }
-                        } else {
+                        } else if (roots.isNotEmpty() || total > 0) {
                             if (inCollection) item {
                                 val first = tracks.itemSnapshotList.items.firstOrNull()
                                 Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                                     TrackCover(first, Modifier.size(112.dp))
                                     Column(Modifier.weight(1f).padding(start = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(title, style = MaterialTheme.typography.titleMedium)
+                                        Text(title, style = MaterialTheme.typography.headlineSmall)
                                         Text("${formatCount(summary.count)} bài · ${clockTime(summary.duration)}", fontSize = 13.sp)
                                         if (f.folder != null) Text(f.folder?.ifBlank { "Thư mục gốc" }.orEmpty(), fontSize = 13.sp)
                                     }
@@ -228,13 +204,25 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
 }
 
 @Composable
+private fun MioLibraryEmpty(chooseTree: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(MioSpacing.gutter),
+        verticalArrangement = Arrangement.spacedBy(MioSpacing.group)) {
+        StudioIcon(R.drawable.ic_library, modifier = Modifier.size(32.dp))
+        Text("Thư viện của bạn", style = MaterialTheme.typography.headlineMedium)
+        Text("Chọn nơi lưu nhạc để bắt đầu.", style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(onClick = chooseTree, modifier = Modifier.heightIn(min = MioSpacing.touch)) { Text("Chọn thư mục") }
+    }
+}
+
+@Composable
 private fun TrackRow(track: TrackEntity, play: () -> Unit, details: () -> Unit, favorite: () -> Unit, enqueue: () -> Unit, playlist: () -> Unit, remove: (() -> Unit)?) {
     var menu by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().clickable(onClick = play).heightIn(min = 72.dp).padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        TrackCover(track, Modifier.size(40.dp)); Spacer(Modifier.width(12.dp))
+    Row(Modifier.fillMaxWidth().clickable(onClickLabel = "Phát bài hát", onClick = play).heightIn(min = 72.dp).padding(start = MioSpacing.gutter, end = 4.dp, top = MioSpacing.compact, bottom = MioSpacing.compact), verticalAlignment = Alignment.CenterVertically) {
+        TrackCover(track, Modifier.size(44.dp)); Spacer(Modifier.width(MioSpacing.group))
         Column(Modifier.weight(1f)) {
-            Text(track.title ?: track.name.substringBeforeLast('.', track.name), fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(track.artist ?: "Không có tag nghệ sĩ", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.title ?: track.name.substringBeforeLast('.', track.name), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(track.artist ?: "Không có tag nghệ sĩ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Text(track.durationMs?.let(::clockTime) ?: "—", fontSize = 13.sp)
         Box {

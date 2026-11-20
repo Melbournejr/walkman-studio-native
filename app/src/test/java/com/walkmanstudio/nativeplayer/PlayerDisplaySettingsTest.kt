@@ -30,7 +30,7 @@ class PlayerDisplaySettingsTest {
         assertFalse(PlayerDisplaySettings.cassetteLandscape(context))
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,CassetteOrientation.requested(true,NowPlayingMode.CASSETTE,false))
     }
-    @Test fun defaultsToClassicAndRestoresAllModesWithoutChangingTheme() {
+    @Test fun defaultsToModernAndRestoresAllModesWithoutChangingTheme() {
         val context=ApplicationProvider.getApplicationContext<Context>()
         val prefs=context.getSharedPreferences("appearance",Context.MODE_PRIVATE)
         prefs.edit().clear().putString("walkman",WalkmanTheme.RH1.id).commit()

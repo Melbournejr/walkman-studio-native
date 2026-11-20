@@ -7,8 +7,6 @@ import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -17,13 +15,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.walkmanstudio.nativeplayer.library.ArtworkResolver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -63,17 +61,17 @@ fun AlbumCover(key: String?, identity: String, modifier: Modifier, large: Boolea
     else {
         val background = MaterialTheme.colorScheme.primaryContainer
         val ink = MaterialTheme.colorScheme.onPrimaryContainer
-        val hash = remember(identity){java.security.MessageDigest.getInstance("SHA-256").digest(identity.toByteArray())}
+        val initials = identity.substringAfter('|').trim().take(2).uppercase(java.util.Locale.ROOT)
         Box(modifier.clip(shape).background(background), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
-                val cell = size.minDimension / 7
-                val left = (size.width - cell * 5) / 2; val top = (size.height - cell * 5) / 2
-                for (x in 0..2) for (y in 0..4) if (hash[y * 3 + x].toInt() and 1 == 1) {
-                    drawRect(ink.copy(alpha=.18f),Offset(left+x*cell,top+y*cell),Size(cell*.9f,cell*.9f))
-                    if(x!=2)drawRect(ink.copy(alpha=.18f),Offset(left+(4-x)*cell,top+y*cell),Size(cell*.9f,cell*.9f))
+                val radius = size.minDimension * .38f
+                val stroke = Stroke(width = (size.minDimension * .005f).coerceAtLeast(1f))
+                for (ring in listOf(.65f, .78f, .9f, 1f)) {
+                    drawCircle(ink.copy(alpha = .18f), radius * ring, style = stroke)
                 }
             }
-            Text(identity.substringAfter('|').trim().take(2).uppercase(java.util.Locale.ROOT).ifBlank { "♪" }, color = ink)
+            if (initials.isBlank()) StudioIcon(R.drawable.ic_album, modifier = Modifier.size(if (large) 32.dp else 16.dp))
+            else Text(initials, color = ink, style = if (large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.labelMedium)
         }
     }
 }

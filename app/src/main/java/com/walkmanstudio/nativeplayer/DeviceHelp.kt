@@ -40,7 +40,7 @@ fun DeviceHelp(dismiss: () -> Unit) {
         Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Có thể bỏ qua và mở lại hướng dẫn bằng nút ?. Tên menu phụ thuộc bản HyperOS; ứng dụng không tự bật các thiết lập này.")
             Text("Trạng thái Android: " + if (exempt) "đã được miễn tối ưu pin." else "chưa được miễn tối ưu pin.")
-            Text("1. Cài đặt → Ứng dụng → Quản lý ứng dụng → Walkman Studio Native → Tiết kiệm pin → Không hạn chế.")
+            Text("1. Cài đặt → Ứng dụng → Quản lý ứng dụng → Mio Player → Tiết kiệm pin → Không hạn chế.")
             Text("2. Trong cài đặt ứng dụng/Quyền, tìm Tự khởi động hoặc Tự khởi động nền và bật cho ứng dụng.")
             Text("3. Mở đa nhiệm, mở menu thẻ ứng dụng và chọn Khóa nếu máy cung cấp.")
             listOf("unrestricted" to "Tôi đã chọn Không hạn chế", "autostart" to "Tôi đã bật Tự khởi động", "locked" to "Tôi đã khóa thẻ đa nhiệm").forEach { (key, label) ->

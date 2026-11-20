@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.WalkmanStudioNative" parent="Theme.WalkmanStudioNative.Base">
+        <item name="android:windowSplashScreenBackground">@color/mio_launch_graphite</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/mio_mark</item>
+    </style>
+</resources>

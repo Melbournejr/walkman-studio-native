@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 
 /** Delegates volume UI to Android; no app gain, DSP or playback-route changes. */
 @Composable
-internal fun SystemVolumeButton() {
+internal fun SystemVolumeButton(modifier: Modifier = Modifier.fillMaxWidth()) {
     val context=LocalContext.current
     OutlinedButton(onClick={
         val intent=Intent(if(Build.VERSION.SDK_INT>=29) Settings.Panel.ACTION_VOLUME else Settings.ACTION_SOUND_SETTINGS)
@@ -25,5 +25,5 @@ internal fun SystemVolumeButton() {
             try { context.startActivity(Intent(Settings.ACTION_SOUND_SETTINGS)) }
             catch (_: ActivityNotFoundException) { /* OEM has no sound-settings handler; hardware volume keys remain available. */ }
         }
-    }, modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text("Âm lượng hệ thống")}
+    }, modifier=modifier.heightIn(min=48.dp)) {Text("Âm lượng hệ thống")}
 }

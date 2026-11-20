@@ -25,25 +25,13 @@ fun SignalAndDsp(model: PlaybackViewModel) {
             Column(Modifier.weight(1f)) { Text("Source Direct",style=MaterialTheme.typography.titleMedium);Text("Bỏ qua EQ, Clear Bass, ReplayGain, limiter, dither và bù mức DSD.",fontSize=13.sp) }
             Switch(checked=config.sourceDirect,onCheckedChange={model.setDsp(config.copy(sourceDirect=it))},modifier=Modifier.semantics{contentDescription="Source Direct"})
         }
-        Text("Đường tín hiệu",style=MaterialTheme.typography.titleMedium)
-        Text("Tệp: ${track?.mimeType ?: "Chưa chọn bài"}",fontSize=14.sp)
-        CassetteSignal.chips(signal,config.sourceDirect,!config.sourceDirect).forEach { chip ->
-            Text(chip,fontSize=14.sp)
-        }
-        Text("PCM sau giải mã · ${signal.decoded}",fontSize=13.sp)
-        if(config.sourceDirect) Text("AudioTrack · ${signal.output}",fontSize=13.sp)
-        signal.outputDevice?.let { Text("Thiết bị đầu ra · $it",fontSize=13.sp) }
-        signal.decoderMatchesAudioTrack?.let {
-            Text(if(it) "PCM sau giải mã khớp AudioTrack" else "PCM sau giải mã khác AudioTrack",fontSize=13.sp)
-        }
-        if(signal.dspBypassActive == true) Text("AudioTrack đang dùng đường bỏ qua DSP",fontSize=13.sp)
-        Text("Android có thể trộn hoặc đổi tần số sau ngõ ra ứng dụng. Chưa đo tín hiệu điện tại DAC hoặc codec Bluetooth.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        val usb by model.usb.collectAsStateWithLifecycle()
-        if(usb.connected) Text(usb.reason,fontSize=13.sp)
-        if(!config.sourceDirect) Text("DSP · Gain ${String.format(Locale.ROOT,"%.1f",signal.gainDb)} dB · ${signal.clipped} mẫu vượt ngưỡng trước giới hạn",fontSize=13.sp)
+        MioSignalPath(signal, track?.mimeType, config.sourceDirect)
         val dsdGain by model.dsdGainDb.collectAsStateWithLifecycle()
-        if(dsdGain>0 && !config.sourceDirect) Text("DSD +$dsdGain dB · ${signal.dsdOverFullScaleSamples} mẫu-kênh giải mã vượt 0 dBFS (kể cả bộ đệm/tua lại)",fontSize=13.sp)
-        HorizontalDivider(Modifier.padding(vertical=8.dp))
+        if (dsdGain > 0 && !config.sourceDirect) {
+            Text("DSD +$dsdGain dB · ${signal.dsdOverFullScaleSamples} mẫu-kênh giải mã vượt 0 dBFS",
+                style = MaterialTheme.typography.bodyMedium)
+        }
+        HorizontalDivider(Modifier.padding(vertical = MioSpacing.compact))
         Text("EQ 10 dải · ±12 dB",style=MaterialTheme.typography.titleMedium)
         DspConfig.FREQUENCIES.forEachIndexed { index,frequency ->
             val name=if(frequency<1000) "$frequency Hz" else "${frequency/1000} kHz"
@@ -71,6 +59,49 @@ fun SignalAndDsp(model: PlaybackViewModel) {
                 enabled=!config.sourceDirect,modifier=Modifier.semantics{contentDescription="Giới hạn mềm"})
         }
         TextButton(onClick={model.setDsp(DspConfig(sourceDirect=config.sourceDirect))},modifier=Modifier.heightIn(min=48.dp)) { Text("Đặt lại âm thanh") }
+    }
+}
+
+@Composable
+internal fun AudioLab(model: PlaybackViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(MioSpacing.group)) {
+        SignalAndDsp(model)
+        Stage8AudioSettings(model)
+        UsbOutputSettings(model)
+    }
+}
+
+@Composable
+internal fun MioSignalPath(signal: SignalUi, mime: String?, sourceDirect: Boolean) {
+    Column(Modifier.fillMaxWidth().padding(vertical = MioSpacing.compact),
+        verticalArrangement = Arrangement.spacedBy(MioSpacing.group)) {
+        SettingsHeading("Đường tín hiệu")
+        SignalStage("Nguồn", signal.source, mime)
+        SignalStage("Giải mã", signal.decoded, signal.decoder)
+        val processing = when {
+            signal.dspBypassActive == true -> "AudioTrack xác nhận đường bỏ qua DSP"
+            sourceDirect -> "Đã chọn Source Direct"
+            else -> "Gain ${String.format(Locale.ROOT, "%.1f", signal.gainDb)} dB · ${signal.clipped} mẫu vượt ngưỡng"
+        }
+        SignalStage("Xử lý DSP", processing)
+        val match = signal.decoderMatchesAudioTrack?.let {
+            if (it) "Định dạng PCM khớp bộ giải mã" else "Định dạng PCM khác bộ giải mã"
+        }
+        SignalStage("Ngõ ra Android", signal.output,
+            listOfNotNull(signal.outputDevice, match).joinToString(" · "))
+        Text("Android có thể trộn hoặc đổi tần số sau AudioTrack. Tín hiệu tại DAC hoặc Bluetooth chưa được đo.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun SignalStage(title: String, value: String, detail: String? = null) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text(value.ifBlank { "Chưa có dữ liệu" }, style = MaterialTheme.typography.bodyLarge)
+        detail?.takeIf(String::isNotBlank)?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

@@ -1,4 +1,6 @@
-# Walkman Studio Native
+# Mio Player
+
+Mio Player is an offline Android Hi-Fi player with optional retro cassette and vinyl presentations. The production Android package remains `com.walkmanstudio.nativeplayer`. See the [design audit and migration notes](docs/mio-player-design.md).
 
 Android offline: Kotlin/Compose Material3, SAF→Room→Media3 MediaLibraryService→AudioTrack.
 App ID `com.walkmanstudio.nativeplayer`; cài song song với bản WebView cũ. minSdk26,

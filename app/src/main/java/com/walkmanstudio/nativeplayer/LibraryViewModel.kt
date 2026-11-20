@@ -38,7 +38,7 @@ class LibraryViewModel(private val repository: LibraryRepository, private val sa
     }
     fun showNowPlaying(value:Boolean) {savedState["nowPlaying"]=value}
     fun setWalkmanTheme(theme:WalkmanTheme){walkmanTheme.value=theme;preferences.edit().putString("walkman",theme.id).apply()}
-    val appearance = MutableStateFlow(preferences.getString("mode", "system") ?: "system")
+    val appearance = MutableStateFlow(preferences.getString("mode", "dark") ?: "dark")
     private val notices = Channel<String>(Channel.BUFFERED)
     val messages = notices.receiveAsFlow()
     val roots = repository.roots.catch { notices.send("Chưa đọc được danh sách thư mục."); emit(emptyList()) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -56,6 +56,11 @@ class LibraryViewModel(private val repository: LibraryRepository, private val sa
         require(value in setOf("library", "folders", "favorites", "settings"))
         if (tab.value != value && value != "settings") { change(TrackFilter(favorites = value == "favorites")); savedState["browser"] = "songs" }
         savedState["tab"] = value
+    }
+    val settingsSection = savedState.getStateFlow("mioSettingsSection", MioSettingsSection.APPEARANCE.name)
+    fun openSettings(section: MioSettingsSection) {
+        savedState["mioSettingsSection"] = section.name
+        selectTab("settings")
     }
     fun browse(value: String) { savedState["browser"] = value; change(TrackFilter()) }
     fun openFolder(root: String, path: String = "") { savedState["tab"] = "folders"; change(TrackFilter(rootId = root, folder = path, recursive = false)) }
