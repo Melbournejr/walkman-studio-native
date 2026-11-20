@@ -21,7 +21,7 @@ The Gradle 8.13 wrapper runs with JDK 21, SDK 36, Build Tools 35.0.0, CMake 3.22
 | High-resolution PCM when Media3 rejects float | Media3 PCM16 conversion, then the PCM16 DSP path | PCM16 at the decoder rate |
 | Source Direct | Decoder PCM or unity-gain DSD-to-PCM | Media3's PCM16 or high-resolution float path without custom processors |
 
-Media3 1.11.1 skips its custom processor chain when it enables float output. The high-resolution path therefore runs DSP in a forwarding sink and retains Media3's output configuration, trimming and backpressure. The application never selects a new sample rate. Float32 represents the complete signed PCM24 sample precision and rounds PCM32 samples to Float32 precision. Decoder output remains device and codec dependent. Float output does not use dither. PCM16 dither follows the saved preference. Float DSP runs before Media3 removes encoder priming and padding, so preceding decoded samples can influence filter state at the start of a gapless track.
+Media3 1.11.1 skips its custom processor chain when it enables float output. The high-resolution path therefore runs DSP in a forwarding sink and retains Media3's output configuration, trimming and backpressure. The application never selects a new sample rate. Float32 represents the complete signed PCM24 sample precision and rounds PCM32 samples to Float32 precision. Decoder output remains device and codec dependent. Float output does not use dither. PCM16 dither follows the saved preference when the DSP changes samples. A dry PCM16 chain preserves the input codes. Float DSP runs before Media3 removes encoder priming and padding, so preceding decoded samples can influence filter state at the start of a gapless track.
 
 The fixed-coefficient EQ banks crossfade over 10 ms. New edits during a crossfade replace the next pending target. The optional zero-latency soft knee starts at approximately −0.9 dBFS and compresses instantaneous peaks toward full scale. It defaults off and works independently of the existing EQ/ReplayGain headroom calculation. Source Direct disables it and uses the saved DSD gain only after returning to DSP playback.
 
@@ -67,7 +67,7 @@ Run `java -cp "$KOTLIN_STDLIB:core/build/libs/core.jar" qa/DspHostBenchmark.java
 
 | 96 kHz stereo EQ | Stage 11 | Upgrade |
 | --- | ---: | ---: |
-| All bands at 0 dB | 23.73 ns/sample | 4.77 ns/sample |
-| All bands at +6 dB | 23.34 ns/sample | 34.01 ns/sample |
+| All bands at 0 dB | 23.73 ns/sample | 4.86 ns/sample |
+| All bands at +6 dB | 23.34 ns/sample | 25.52 ns/sample |
 
-Skipping identity filters speeds up the flat EQ. The dense preset costs more with the new filter-bank/state handling. Neither benchmark measures AudioTrack, ARM hardware, device power, or end-to-end playback latency.
+Skipping identity filters speeds up the flat EQ. The dense preset costs 2.18 ns/sample more with the new filter-bank and state handling. Neither benchmark measures AudioTrack, ARM hardware, device power, or end-to-end playback latency.
