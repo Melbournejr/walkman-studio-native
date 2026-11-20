@@ -3,7 +3,6 @@ package com.walkmanstudio.nativeplayer.playback
 
 import android.content.Context
 import androidx.media3.common.Format
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -16,7 +15,7 @@ class StudioRenderersFactory(context:Context,private val state:DspState,private 
     private val observedVolume: (android.media.AudioTrack, Float) -> Unit = { _, _ -> },
 ): DefaultRenderersFactory(context) {
     private val direct=state.config.get().sourceDirect
-    init { setEnableAudioFloatOutput(direct) }
+    init { setEnableAudioFloatOutput(true) }
     override fun buildAudioSink(context:Context,enableFloatOutput:Boolean,enableAudioOutputPlaybackParams:Boolean):AudioSink {
         val provider = object : ForwardingAudioOutputProvider(AudioTrackAudioOutputProvider.Builder(context).build()) {
             override fun getAudioOutput(config: AudioOutputProvider.OutputConfig): AudioOutput {
@@ -30,13 +29,10 @@ class StudioRenderersFactory(context:Context,private val state:DspState,private 
                 }
             }
         }
-        val sink=DefaultAudioSink.Builder(context).setAudioOutputProvider(provider).setEnableFloatOutput(direct)
+        val sink=DefaultAudioSink.Builder(context).setAudioOutputProvider(provider).setEnableFloatOutput(true)
             .setAudioProcessors(processors(state)).build()
+        if (!direct) return HighResolutionAudioSink(sink, state, decoded)
         return object:ForwardingAudioSink(sink) {
-            // Compressed passthrough/offload cannot run an AudioProcessor.
-            override fun getFormatSupport(format:Format):Int = if(!direct && format.sampleMimeType!=MimeTypes.AUDIO_RAW) AudioSink.SINK_FORMAT_UNSUPPORTED else super.getFormatSupport(format)
-            override fun supportsFormat(format:Format):Boolean = getFormatSupport(format)!=AudioSink.SINK_FORMAT_UNSUPPORTED
-            override fun getFormatOffloadSupport(format:Format):AudioOffloadSupport = if(!direct) AudioOffloadSupport.DEFAULT_UNSUPPORTED else super.getFormatOffloadSupport(format)
             override fun configure(audioSinkConfig:AudioSink.AudioSinkConfig) { decoded(audioSinkConfig.format);super.configure(audioSinkConfig) }
         }
     }

@@ -63,6 +63,52 @@ class DspProcessorTest {
         val processor=DspAudioProcessor(DspState(DspConfig(false)))
         try{processor.configure(AudioProcessor.AudioFormat(48000,2,C.ENCODING_PCM_FLOAT));fail("Sink must convert before processor")}catch(_:AudioProcessor.UnhandledAudioFormatException){}
     }
+    @Test fun highResolutionConvertsSignedExtremaAndRejectsNonFiniteFloatWithoutDither() {
+        val state = DspState(DspConfig(false, preventClipping = false, dither = true))
+        fun output(encoding: Int, bytes: ByteBuffer): FloatArray {
+            val processor = DspAudioProcessor(state, floatOutput = true)
+            val format = processor.configure(AudioProcessor.AudioFormat(96000, 1, encoding))
+            assertEquals(C.ENCODING_PCM_FLOAT, format.encoding)
+            assertEquals(96000, format.sampleRate)
+            processor.flush(AudioProcessor.StreamMetadata.DEFAULT)
+            processor.queueInput(bytes.flip())
+            val result = processor.output
+            return FloatArray(result.remaining() / 4) { result.float }
+        }
+        fun le(size: Int) = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN)
+        assertArrayEquals(floatArrayOf(-1f, 32767f / 32768), output(C.ENCODING_PCM_16BIT,
+            le(4).putShort(Short.MIN_VALUE).putShort(Short.MAX_VALUE)), 0f)
+        assertArrayEquals(floatArrayOf(-1f, -1f / 8388608, 8388607f / 8388608),
+            output(C.ENCODING_PCM_24BIT, le(9).put(byteArrayOf(0, 0, -128, -1, -1, -1, -1, -1, 127))), 0f)
+        assertArrayEquals(floatArrayOf(-1f, 1f / 2147483648f, 1f), output(C.ENCODING_PCM_32BIT,
+            le(12).putInt(Int.MIN_VALUE).putInt(1).putInt(Int.MAX_VALUE)), 0f)
+        assertArrayEquals(floatArrayOf(0f, 0f, 0f, .125f), output(C.ENCODING_PCM_FLOAT,
+            le(16).putFloat(Float.NaN).putFloat(Float.NEGATIVE_INFINITY).putFloat(Float.POSITIVE_INFINITY)
+                .putFloat(.125f)), 0f)
+    }
+
+    @Test fun highResolutionBuffersPartialSamplesAndFramesAndDiscardsTailsOnFlush() {
+        val processor = DspAudioProcessor(DspState(DspConfig(false, preventClipping = false)), floatOutput = true)
+        processor.configure(AudioProcessor.AudioFormat(192000, 3, C.ENCODING_PCM_24BIT))
+        processor.flush(AudioProcessor.StreamMetadata.DEFAULT)
+        val frame = byteArrayOf(0, 0, -64, 0, 0, 0, 0, 0, 64)
+        for (byte in frame.dropLast(1)) {
+            processor.queueInput(ByteBuffer.wrap(byteArrayOf(byte)))
+            assertFalse(processor.output.hasRemaining())
+        }
+        processor.queueInput(ByteBuffer.wrap(byteArrayOf(frame.last())))
+        val result = processor.output
+        assertArrayEquals(floatArrayOf(-.5f, 0f, .5f), FloatArray(3) { result.float }, 0f)
+        processor.queueInput(ByteBuffer.wrap(frame.copyOf(5)))
+        assertFalse(processor.output.hasRemaining())
+        processor.queueEndOfStream()
+        assertTrue(processor.isEnded)
+        processor.flush(AudioProcessor.StreamMetadata.DEFAULT)
+        processor.queueInput(ByteBuffer.wrap(frame))
+        val afterFlush = processor.output
+        assertArrayEquals(floatArrayOf(-.5f, 0f, .5f), FloatArray(3) { afterFlush.float }, 0f)
+    }
+
     @Test fun ditherDefaultsOnAndLegacyPreferencesMigrateWithoutChangingEqOrReplayGain() {
         assertTrue(DspConfig().dither)
         val config=DspConfig(false,List(10){it-5.0},8.0,-6.0,ReplayGainMode.ALBUM,false,dither=false)
