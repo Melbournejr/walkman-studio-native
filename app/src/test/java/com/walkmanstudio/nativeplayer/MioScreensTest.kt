@@ -294,6 +294,29 @@ class MioScreensTest {
         frameAfter.recycle()
     }
 
+    @Config(qualifiers = "w500dp-h1100dp-mdpi")
+    @Test fun tallPortraitKeepsCassetteAtTheApprovedScaleWithBoundedTopSpace() {
+        compose.setContent {
+            StudioTheme("dark") {
+                Surface(Modifier.size(480.dp, 1040.dp)) {
+                    CassettePlayerScreen(
+                        WalkmanTheme.MIO,
+                        CassetteScreenState("Bên kia mùa mưa", durationMs = 296000, positionMs = 84000,
+                            requested = true, timelineKnown = true, seekEnabled = true),
+                        CassetteActions(stop = {}), visible = false,
+                    )
+                }
+            }
+        }
+
+        val deck = compose.onNodeWithTag("mio-case", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val keys = compose.onNodeWithTag("mio-key-row", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("Cassette width stays at the approved portrait size", deck.width <= 380f)
+        assertTrue("The hardware begins below the header without a tall-screen void", deck.top <= 110f)
+        assertTrue("The transport remains inside the cassette case", keys.top > deck.top && keys.bottom < deck.bottom)
+        compose.onNodeWithContentDescription("Dừng phát").assertIsDisplayed()
+    }
+
     @Test fun compactPlayerKeepsActionsAtLargeFontWithMissingArtwork() {
         compose.setContent {
             val deviceDensity = androidx.compose.ui.platform.LocalDensity.current

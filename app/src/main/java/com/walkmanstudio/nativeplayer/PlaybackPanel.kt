@@ -122,7 +122,7 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
             }
         }
     }) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
+        Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             val specs = CassetteSignal.chips(signal, dsp.sourceDirect, !dsp.sourceDirect)
             if (mode == NowPlayingMode.CLASSIC) {
                 MioNowPlaying(state, specs, actions,

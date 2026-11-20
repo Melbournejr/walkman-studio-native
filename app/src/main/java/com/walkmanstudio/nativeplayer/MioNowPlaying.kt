@@ -42,14 +42,11 @@ internal fun MioNowPlaying(
     val colors = MaterialTheme.colorScheme
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= 640.dp
-        val portraitHeight = maxHeight
         val coverWidth = if (wide) minOf((maxWidth - 88.dp) / 2, 440.dp)
-            else minOf(maxWidth * .84f, maxHeight * .56f, 440.dp).coerceAtLeast(96.dp)
+            else minOf(maxWidth * .84f, maxHeight * .56f, 328.dp).coerceAtLeast(96.dp)
         val controls: @Composable () -> Unit = {
-            val panelHeight = if (wide || state.id == null) 0.dp
-                else (portraitHeight - coverWidth - 44.dp).coerceAtMost(280.dp).coerceAtLeast(0.dp)
-            Column(Modifier.width(coverWidth).heightIn(min = panelHeight),
-                verticalArrangement = if (panelHeight >= 280.dp) Arrangement.SpaceBetween else Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.width(coverWidth),
+                verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.testTag("mio-track-metadata"), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(state.title.ifBlank { "Chưa chọn bài" },
                         style = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Serif, fontSize = 27.sp, lineHeight = 30.sp, fontWeight = FontWeight.Medium),
@@ -114,7 +111,7 @@ internal fun MioNowPlaying(
                 controls()
             }
         } else {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = portraitHeight).padding(top = 28.dp, bottom = 16.dp),
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 28.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 val frame = RoundedCornerShape(16.dp)
                 Box(Modifier.size(coverWidth).testTag("mio-cover").clip(frame).border(1.dp, colors.primary.copy(alpha = .45f), frame)) {

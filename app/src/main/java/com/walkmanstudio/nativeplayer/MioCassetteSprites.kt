@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
@@ -77,13 +76,15 @@ internal fun MioCassetteSprites(
     val labelInk = Color(0xFF35271B)
     val title = state.title.ifBlank { "Chưa chọn bài" }
     BoxWithConstraints(Modifier.fillMaxSize().mioGraphite().clipToBounds()) {
-        // Only the black overscan outside the metal case is cropped.
-        val canvasWidth = maxWidth * 1.018f
+        // Keep the approved 390 dp portrait scale on large phones. On short
+        // windows, scroll before shrinking the hardware below a usable width.
+        val canvasWidth = minOf(maxWidth * 1.018f, 390.dp * 1.018f,
+            (maxHeight * (941f / 1672f)).coerceAtLeast(320.dp))
         val unit = canvasWidth / 941
         val canvasHeight = unit * 1672
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(0.dp, BiasAlignment.Vertical(-.16f))) {
+        val top = ((maxHeight - canvasHeight).coerceAtLeast(0.dp) * .42f).coerceAtMost(40.dp)
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = top),
+            horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.requiredWidth(canvasWidth).height(canvasHeight)) {
                 Sprite(housing, housing.bounds.place(unit))
                 Spacer(CassetteRect(20, 154, 900, 1449).place(unit).testTag("mio-case"))
