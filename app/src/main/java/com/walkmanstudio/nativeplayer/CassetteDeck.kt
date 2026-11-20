@@ -49,7 +49,7 @@ internal fun CassetteDeckHousing(
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(modifier) {
-        Canvas(Modifier.fillMaxSize()) {
+        Canvas(Modifier.matchParentSize()) {
             val edge = 8.dp.toPx()
             val topLeft = Offset(edge, edge)
             val outer = Size((size.width - edge * 2).coerceAtLeast(0f), (size.height - edge * 2).coerceAtLeast(0f))
@@ -78,6 +78,13 @@ internal fun CassetteDeckHousing(
             // Fixed, low-amplitude metal grain: no random values, texture assets or frame loop.
             val grainBounds = Path().apply { addRoundRect(RoundRect(Rect(topLeft, outer), radius)) }
             clipPath(grainBounds) {
+                if (theme == WalkmanTheme.MIO) repeat((outer.height / 1.4.dp.toPx()).toInt()) { line ->
+                    val y = edge + line * 1.4.dp.toPx()
+                    val strength = ((line * 31) % 13) / 13f
+                    val left = edge + ((line * 37) % 43) / 43f * outer.width * .16f
+                    drawLine(Color.White.copy(alpha = .018f + strength * .074f),
+                        Offset(left, y), Offset(edge + outer.width, y), .48.dp.toPx())
+                }
                 repeat(130) { n ->
                     val x = edge + ((n * 73) % 997) / 997f * outer.width
                     val y = edge + ((n * 149) % 991) / 991f * outer.height
@@ -128,7 +135,7 @@ internal fun CassetteFace(
 
             // Paper edge and slight cast shadow; no duplicate title is painted on the Canvas.
             val labelOrigin = Offset(w * .065f, h * .065f)
-            val labelSize = Size(w * .87f, h * .32f)
+            val labelSize = Size(w * .87f, h * if (theme == WalkmanTheme.MIO) .26f else .32f)
             drawRoundRect(Color.Black.copy(alpha = .32f), labelOrigin + Offset(1.dp.toPx(), 2.dp.toPx()),
                 labelSize, CornerRadius(h * .018f))
             drawRoundRect(Brush.linearGradient(listOf(lerp(theme.display, Color.White, .06f), theme.display),
@@ -222,8 +229,15 @@ internal fun CassetteFace(
                 Offset(w * .04f, h * .945f), Offset(w * .96f, h * .945f)).forEach { screw -> cassetteScrew(screw, h * .0125f) }
         }
         Box(Modifier.align(Alignment.TopCenter).padding(top = maxHeight * .065f).width(maxWidth * .87f)
-            .height(maxHeight * .32f).padding(horizontal = 10.dp, vertical = 3.dp), contentAlignment = Alignment.CenterStart) {
-            WordFitLabel(title.ifBlank { "Chưa chọn bài" }, theme.displayInk,
+            .height(maxHeight * if (theme == WalkmanTheme.MIO) .26f else .32f)
+            .padding(horizontal = 10.dp, vertical = 3.dp), contentAlignment = Alignment.CenterStart) {
+            if (theme == WalkmanTheme.MIO) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    BasicText("mio", style = TextStyle(color = theme.displayInk, fontSize = 26.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+                    BasicText("C-60", style = TextStyle(color = theme.displayInk, fontSize = 15.sp, fontFamily = FontFamily.Monospace))
+                }
+            } else WordFitLabel(title.ifBlank { "Chưa chọn bài" }, theme.displayInk,
                 modifier = Modifier.fillMaxSize(), testTag = "cassette-label", minFontSp = 12, maxFontSp = 22)
         }
         val counterHeight = maxOf(maxHeight * .113f, 24.dp).coerceAtMost(maxHeight * .15f)
@@ -261,6 +275,15 @@ private fun DrawScope.cassetteReel(center: Offset, radius: Float, pack: Float, a
     // Lighting remains fixed while only the six internal drive lugs rotate. The outer
     // silhouette is a continuous WHITE CIRCLE, never an outward Settings cog/star.
     val hubRadius = radius * .42f
+    drawCircle(Color(0xFFD7CEC0).copy(alpha = .8f), radius * .51f, center, style = Stroke(1.3.dp.toPx()))
+    rotate(angle, center) {
+        repeat(12) { notch ->
+            rotate(notch * 30f, center) {
+                val start = center - Offset(0f, radius * .53f)
+                drawLine(window, start, start - Offset(0f, radius * .067f), 1.1.dp.toPx())
+            }
+        }
+    }
     drawCircle(Color.Black.copy(alpha = .60f), hubRadius, center + Offset(.8.dp.toPx(), 1.2.dp.toPx()))
     drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFFC6CED2)),
         center = center - Offset(hubRadius * .28f, hubRadius * .28f), radius = hubRadius * 1.7f), hubRadius, center)

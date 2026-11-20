@@ -21,11 +21,11 @@ class LibraryViewModel(private val repository: LibraryRepository, private val sa
     private val preferences = app.getSharedPreferences("appearance", Context.MODE_PRIVATE)
     init { viewModelScope.launch { repository.indexMissingMetadata() } }
     val tab = savedState.getStateFlow("tab", "library")
-    val browser = savedState.getStateFlow("browser", "songs")
+    val browser = savedState.getStateFlow("browser", "albums")
     private val encoded = savedState.getStateFlow("selection", TrackFilter().encode())
     val filter = encoded.map { TrackFilter.decode(it) ?: TrackFilter() }.stateIn(viewModelScope, SharingStarted.Eagerly, TrackFilter.decode(encoded.value) ?: TrackFilter())
     val nowPlaying = savedState.getStateFlow("nowPlaying",false)
-    val walkmanTheme = MutableStateFlow(WalkmanTheme.find(preferences.getString("walkman","tpsl2")))
+    val walkmanTheme = MutableStateFlow(WalkmanTheme.find(preferences.getString("walkman","mio")))
     val nowPlayingMode = MutableStateFlow(PlayerDisplaySettings.read(app))
     val cassetteLandscape = MutableStateFlow(PlayerDisplaySettings.cassetteLandscape(app))
     fun setCassetteLandscape(enabled: Boolean) {
@@ -38,7 +38,7 @@ class LibraryViewModel(private val repository: LibraryRepository, private val sa
     }
     fun showNowPlaying(value:Boolean) {savedState["nowPlaying"]=value}
     fun setWalkmanTheme(theme:WalkmanTheme){walkmanTheme.value=theme;preferences.edit().putString("walkman",theme.id).apply()}
-    val appearance = MutableStateFlow(preferences.getString("mode", "system") ?: "system")
+    val appearance = MutableStateFlow(preferences.getString("mode", "dark") ?: "dark")
     private val notices = Channel<String>(Channel.BUFFERED)
     val messages = notices.receiveAsFlow()
     val roots = repository.roots.catch { notices.send("Chưa đọc được danh sách thư mục."); emit(emptyList()) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -53,9 +53,18 @@ class LibraryViewModel(private val repository: LibraryRepository, private val sa
     private fun change(value: TrackFilter) { savedState["selection"] = value.encode() }
     fun setQuery(value: String) { change(filter.value.copy(query = value.take(512))) }
     fun selectTab(value: String) {
-        require(value in setOf("library", "folders", "favorites", "settings"))
-        if (tab.value != value && value != "settings") { change(TrackFilter(favorites = value == "favorites")); savedState["browser"] = "songs" }
+        require(value in setOf("library", "folders", "favorites", "settings", "audio"))
+        if (tab.value != value && value != "settings" && value != "audio") { change(TrackFilter(favorites = value == "favorites")); savedState["browser"] = if (value == "library") "albums" else "songs" }
         savedState["tab"] = value
+    }
+    val settingsSection = savedState.getStateFlow("mioSettingsSection", "HOME")
+    fun showSettingsHome() {
+        savedState["mioSettingsSection"] = "HOME"
+        selectTab("settings")
+    }
+    fun openSettings(section: MioSettingsSection) {
+        savedState["mioSettingsSection"] = section.name
+        selectTab("settings")
     }
     fun browse(value: String) { savedState["browser"] = value; change(TrackFilter()) }
     fun openFolder(root: String, path: String = "") { savedState["tab"] = "folders"; change(TrackFilter(rootId = root, folder = path, recursive = false)) }

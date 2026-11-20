@@ -42,7 +42,7 @@ import kotlin.math.sin
 import kotlin.math.PI
 
 enum class NowPlayingMode(val id: String, val label: String) {
-    CLASSIC("classic", "Cổ điển"), CASSETTE("cassette", "Cassette"), VINYL("vinyl", "Đĩa than");
+    CLASSIC("classic", "Hiện đại"), CASSETTE("cassette", "Cassette retro"), VINYL("vinyl", "Đĩa than");
     companion object { fun find(id: String?) = entries.firstOrNull { it.id == id } ?: CLASSIC }
 }
 

@@ -179,6 +179,8 @@ internal fun CassetteDeckScreen(
                             }
                         }
                     }
+                } else if (theme == WalkmanTheme.MIO) {
+                    MioCassetteSprites(state, actions, rotation, progress, deckSeek) { seek(false) }
                 } else {
                     // Keep an accessibility scroll ancestor, while measuring a bounded
                     // content group. At 100% the tested400x800/360x640 viewports do not scroll.
@@ -270,6 +272,11 @@ private fun DeckAuxiliaryBar(
             IconButton(onClick = actions.close, modifier = Modifier.size(48.dp)) {
                 StudioIcon(R.drawable.ic_expand, "Thu nhỏ trình phát")
             }
+            if (portraitTop) Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Text("Retro Mode", Modifier.background(theme.face, RoundedCornerShape(14.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                    color = theme.ink, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             IconToggleButton(checked = state.favorite, onCheckedChange = { actions.favorite() }, modifier = Modifier.size(48.dp)) {
                 StudioIcon(R.drawable.ic_favorite, if (state.favorite) "Bỏ yêu thích" else "Thêm vào yêu thích")
             }
@@ -358,15 +365,19 @@ private fun DeckProgress(
     theme: WalkmanTheme, duration: Long, position: Long, progress: Float, enabled: Boolean,
     inline: Boolean, onChange: (Float) -> Unit, onFinish: () -> Unit,
 ) {
-    val red = if (theme.dark) Color(0xFFFF6969) else Color(0xFFB4232C)
+    val progressInk = when {
+        theme == WalkmanTheme.MIO -> theme.accent
+        theme.dark -> Color(0xFFFF6969)
+        else -> Color(0xFFB4232C)
+    }
     val slider: @Composable (Modifier) -> Unit = { modifier ->
         Slider(value = progress, onValueChange = onChange, onValueChangeFinished = onFinish, enabled = enabled,
             modifier = modifier.heightIn(min = 48.dp).testTag("cassette-progress").semantics { contentDescription = "Tua bài hát" },
-            thumb = { Box(Modifier.size(12.dp).background(if (enabled) red else theme.ink.copy(alpha = .35f), CircleShape)) },
+            thumb = { Box(Modifier.size(12.dp).background(if (enabled) progressInk else theme.ink.copy(alpha = .35f), CircleShape)) },
             track = { Canvas(Modifier.fillMaxWidth().height(2.dp)) {
                 val y = size.height / 2f
                 drawLine(theme.ink.copy(alpha = .22f), Offset(0f, y), Offset(size.width, y), size.height, StrokeCap.Round)
-                drawLine(red, Offset(0f, y), Offset(size.width * progress, y), size.height, StrokeCap.Round)
+                drawLine(progressInk, Offset(0f, y), Offset(size.width * progress, y), size.height, StrokeCap.Round)
             } })
     }
     val elapsed: @Composable () -> Unit = {

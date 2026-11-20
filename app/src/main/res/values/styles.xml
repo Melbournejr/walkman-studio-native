@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.WalkmanStudioNative" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.WalkmanStudioNative.Base" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:colorAccent">#854000</item>
+        <item name="android:colorAccent">#C9A875</item>
+    </style>
+    <style name="Theme.WalkmanStudioNative" parent="Theme.WalkmanStudioNative.Base">
+        <item name="android:windowBackground">@drawable/mio_launch_background</item>
     </style>
 </resources>

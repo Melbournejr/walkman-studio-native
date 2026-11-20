@@ -52,12 +52,14 @@ jobs:
           python3 qa/verify-production-continuity.py "$ANDROID_HOME/build-tools/35.0.0" \
             "$RUNNER_TEMP/previous-release.json" "$assets/walkman-native-$tag.apk"
           if [[ "$tag" == stage12 ]]; then
+            product='Walkman Studio Native'
             notes='First production-signed release. Uninstall Stage 11 before installing this APK. Uninstalling clears its private app data. Keep externally stored music and rescan after installation.'
           else
-            notes="Production-signed Walkman Studio Native $version."
+            product="Mio Player"
+            notes="Production-signed $product $version."
           fi
           gh release create "$tag" "$assets"/* --target "$source_commit" --draft \
-            --title "Walkman Studio Native $version" --notes "$notes"
+            --title "$product $version" --notes "$notes"
           gh api --paginate --slurp 'repos/Melbournejr/walkman-studio-native/releases?per_page=100' \
             | jq -e --arg tag "$tag" '[.[][] | select(.tag_name == $tag and .draft)] | if length == 1 then .[0] else error("Expected one draft") end' \
             > "$RUNNER_TEMP/stage12-draft.json"

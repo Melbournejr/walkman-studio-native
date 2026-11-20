@@ -206,7 +206,7 @@ class AppUpdates(private val context: Context) {
         val intent=Intent(context,MainActivity::class.java).putExtra(OPEN_UPDATES,true).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pending=PendingIntent.getActivity(context,712,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification=NotificationCompat.Builder(context,"app-updates").setSmallIcon(R.drawable.ic_update)
-            .setContentTitle("Bản cập nhật đã sẵn sàng").setContentText("Chạm để xác nhận cài đặt Walkman Studio Native.")
+            .setContentTitle("Bản cập nhật đã sẵn sàng").setContentText("Chạm để xác nhận cài đặt Mio Player.")
             .setContentIntent(pending).setAutoCancel(true).build()
         try { NotificationManagerCompat.from(context).notify(NOTIFICATION,notification) } catch (_:SecurityException) { /* Permission can be revoked after the check. Ready state remains in Settings. */ }
     }

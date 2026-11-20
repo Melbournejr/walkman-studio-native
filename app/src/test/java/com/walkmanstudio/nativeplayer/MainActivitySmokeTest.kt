@@ -97,6 +97,7 @@ class MainActivitySmokeTest {
     @Test fun launchesAndRecreatesWithManifestApplicationAndComposeContent() {
         val application = ApplicationProvider.getApplicationContext<WalkmanStudioApplication>()
         assertEquals("com.walkmanstudio.nativeplayer", application.packageName)
+        assertEquals("Mio Player", application.applicationInfo.loadLabel(application.packageManager).toString())
         assertEquals(0, application.applicationInfo.flags and ApplicationInfo.FLAG_ALLOW_BACKUP)
         val mediaReceiver=application.packageManager.getReceiverInfo(ComponentName(application,"androidx.media3.session.MediaButtonReceiver"),0)
         assertTrue("Cold media-button resumption must have a registered receiver",mediaReceiver.enabled && mediaReceiver.exported)
@@ -118,6 +119,15 @@ class MainActivitySmokeTest {
             shadowOf(Looper.getMainLooper()).idleFor(100, TimeUnit.MILLISECONDS)
             assertResumedWithContent(controller.get())
             assertSame("Activity recreation must retain the service-owned player",servicePlayer,ReflectionHelpers.getField<Any>(playbackFixture!!.get(),"player"))
+            val model = ReflectionHelpers.callInstanceMethod<LibraryViewModel>(controller.get(), "getModel")
+            model.showNowPlaying(true)
+            val notification = Intent(application, MainActivity::class.java)
+                .putExtra(com.walkmanstudio.nativeplayer.update.AppUpdates.OPEN_UPDATES, true)
+            controller.newIntent(notification)
+            assertFalse(model.nowPlaying.value)
+            assertEquals("settings", model.tab.value)
+            assertEquals(MioSettingsSection.UPDATES.name, model.settingsSection.value)
+            assertSame(servicePlayer, ReflectionHelpers.getField<Any>(playbackFixture!!.get(), "player"))
         } finally {
             controller.pause().stop().destroy()
         }

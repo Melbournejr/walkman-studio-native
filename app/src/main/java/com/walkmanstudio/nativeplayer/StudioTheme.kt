@@ -2,41 +2,98 @@
 // Copyright (C) 2026 Walkman Studio Native contributors
 package com.walkmanstudio.nativeplayer
 
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-// Static palettes keep semantic text contrast predictable; album themes arrive in stage7.
+internal object MioSpacing {
+    val compact = 8.dp
+    val group = 12.dp
+    val gutter = 20.dp
+    val touch = 48.dp
+}
+
 val StudioLight = lightColorScheme(
-    primary = Color(0xFF854000), onPrimary = Color.White,
-    primaryContainer = Color(0xFFFFDBC4), onPrimaryContainer = Color(0xFF2D1600),
-    secondary = Color(0xFF535D73), onSecondary = Color.White,
-    secondaryContainer = Color(0xFFDCE2F8), onSecondaryContainer = Color(0xFF151C2D),
-    background = Color(0xFFFFF8F3), onBackground = Color(0xFF211B17),
-    surface = Color(0xFFFFF8F3), onSurface = Color(0xFF211B17),
-    surfaceVariant = Color(0xFFF1DFD2), onSurfaceVariant = Color(0xFF51443C),
-    error = Color(0xFFB3261E), onError = Color.White,
-    errorContainer = Color(0xFFF9DEDC), onErrorContainer = Color(0xFF410E0B),
-    outline = Color(0xFF75665C),
+    primary = Color(0xFF705226), onPrimary = Color.White,
+    primaryContainer = Color(0xFFF1DEBD), onPrimaryContainer = Color(0xFF32230E),
+    secondary = Color(0xFF4B5D70), onSecondary = Color.White,
+    secondaryContainer = Color(0xFFE0E7EE), onSecondaryContainer = Color(0xFF202D39),
+    background = Color(0xFFF4F0E9), onBackground = Color(0xFF1D242D),
+    surface = Color(0xFFF4F0E9), onSurface = Color(0xFF1D242D),
+    surfaceVariant = Color(0xFFE9E6E0), onSurfaceVariant = Color(0xFF4C5967),
+    surfaceContainerLow = Color(0xFFF4F1EA), surfaceContainer = Color(0xFFEDEAE4),
+    surfaceContainerHigh = Color(0xFFE8E5DF), surfaceContainerHighest = Color(0xFFE2DED6),
+    outline = Color(0xFF747C85), outlineVariant = Color(0xFFCFD3D8),
 )
+
 val StudioDark = darkColorScheme(
-    primary = Color(0xFFFFB77F), onPrimary = Color(0xFF4B2600),
-    primaryContainer = Color(0xFF683500), onPrimaryContainer = Color(0xFFFFDBC4),
-    secondary = Color(0xFFBCC6E2), onSecondary = Color(0xFF263147),
-    secondaryContainer = Color(0xFF3C485F), onSecondaryContainer = Color(0xFFDCE2F8),
-    background = Color(0xFF171310), onBackground = Color(0xFFF1E0D6),
-    surface = Color(0xFF171310), onSurface = Color(0xFFF1E0D6),
-    surfaceVariant = Color(0xFF51443C), onSurfaceVariant = Color(0xFFD7C2B5),
-    error = Color(0xFFF2B8B5), onError = Color(0xFF601410),
-    errorContainer = Color(0xFF8C1D18), onErrorContainer = Color(0xFFF9DEDC),
-    outline = Color(0xFFA99080),
+    primary = Color(0xFFD9B77A), onPrimary = Color(0xFF261B0D),
+    primaryContainer = Color(0xFF423321), onPrimaryContainer = Color(0xFFF0D8B2),
+    secondary = Color(0xFFB8C5D3), onSecondary = Color(0xFF232E3A),
+    secondaryContainer = Color(0xFF2B3642), onSecondaryContainer = Color(0xFFD9E4EF),
+    background = Color(0xFF0B0F14), onBackground = Color(0xFFF5F1E9),
+    surface = Color(0xFF0B0F14), onSurface = Color(0xFFF5F1E9),
+    surfaceVariant = Color(0xFF29333E), onSurfaceVariant = Color(0xFFA6ADB7),
+    surfaceContainerLowest = Color(0xFF0D1117), surfaceContainerLow = Color(0xFF151B24),
+    surfaceContainer = Color(0xFF1A222C), surfaceContainerHigh = Color(0xFF232B35),
+    surfaceContainerHighest = Color(0xFF303A45),
+    outline = Color(0xFF8B98A8), outlineVariant = Color(0xFF38404A),
+)
+
+private val baseTypography = Typography()
+private val MioTypography = baseTypography.copy(
+    headlineMedium = baseTypography.headlineMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp),
+    headlineSmall = baseTypography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+    titleLarge = baseTypography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+    titleMedium = baseTypography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
 )
 
 @Composable
+internal fun mioDarkTheme(appearance: String) =
+    appearance == "dark" || (appearance == "system" && isSystemInDarkTheme())
+
+@Composable
 fun StudioTheme(appearance: String, content: @Composable () -> Unit) {
-    val dark = appearance == "dark" || (appearance == "system" && isSystemInDarkTheme())
-    MaterialTheme(colorScheme = if (dark) StudioDark else StudioLight, content = content)
+    MaterialTheme(
+        colorScheme = if (mioDarkTheme(appearance)) StudioDark else StudioLight,
+        typography = MioTypography,
+        content = content,
+    )
+}
+
+
+// Broad graphite reflections track the screen bounds and are cached with the size.
+@Composable
+internal fun Modifier.mioGraphite(): Modifier {
+    val base = MaterialTheme.colorScheme.background
+    val strength = if (base.luminance() < .2f) 1f else .34f
+    return drawWithCache {
+        val glow = Brush.radialGradient(
+            listOf(Color(0xFF637087).copy(alpha = .22f * strength), Color.Transparent),
+            center = Offset(size.width * .15f, size.height * .20f),
+            radius = (size.height * .56f).coerceAtLeast(1f),
+        )
+        val lower = Brush.radialGradient(
+            listOf(Color(0xFF87818A).copy(alpha = .095f * strength), Color.Transparent),
+            center = Offset(size.width * .58f, size.height * .69f),
+            radius = (size.height * .37f).coerceAtLeast(1f),
+        )
+        onDrawBehind {
+            drawRect(base)
+            drawRect(glow)
+            drawRect(lower)
+        }
+    }
 }

@@ -29,7 +29,7 @@ class GithubUpdateTransport : UpdateTransport {
                 connection.instanceFollowRedirects = false
                 connection.connectTimeout = 10_000; connection.readTimeout = 20_000
                 connection.useCaches = false
-                connection.setRequestProperty("User-Agent", "WalkmanStudioNative/${BuildConfig.VERSION_NAME}")
+                connection.setRequestProperty("User-Agent", "MioPlayer/${BuildConfig.VERSION_NAME}")
                 connection.setRequestProperty("Accept", "application/vnd.github+json")
                 connection.setRequestProperty("Accept-Encoding", "identity")
                 connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")

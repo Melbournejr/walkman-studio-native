@@ -181,6 +181,10 @@ class PlaybackViewModel(context: Context) : ViewModel() {
         if(controller==null) { pending={setDsdGain(db)}; connect(); return }
         send(PlaybackCommands.DSD_LEVEL, Bundle().apply { putInt("gainDb", db) })
     }
+    fun stopDeck() {
+        controller?.pause()
+        seek(0L)
+    }
     fun previous() { controller?.seekToPreviousMediaItem() }
     fun setUsbOutput(enabled:Boolean, warningAccepted:Boolean) {
         if(controller==null) {pending={setUsbOutput(enabled,warningAccepted)};connect();return}

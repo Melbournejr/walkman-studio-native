@@ -20,7 +20,7 @@ class ThemeContrastTest {
         }
     }
     @Test fun legendDisplayAndChromeTextKeepContrastAndPersistableIdsAreUnique() {
-        assertTrue(WalkmanTheme.entries.map{it.id}.toSet().size==4)
+        assertTrue(WalkmanTheme.entries.map { it.id }.toSet() == setOf("mio", "tpsl2", "dd9", "rh1", "wm1z"))
         for(theme in WalkmanTheme.entries) {
             for((fg,bg) in listOf(theme.displayInk to theme.display,theme.ink to theme.body,theme.ink to theme.face,theme.accent to theme.body)) {
                 val ratio=(max(luminance(fg),luminance(bg))+0.05)/(min(luminance(fg),luminance(bg))+0.05)
