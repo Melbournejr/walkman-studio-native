@@ -91,7 +91,7 @@ jobs:
           trap 'rm -f -- "$keystore"' EXIT
           printf '%s' "$WALKMAN_SIGNING_KEYSTORE_B64" | base64 --decode > "$keystore"
           unset WALKMAN_SIGNING_KEYSTORE_B64
-          certificate="$(keytool -exportcert -keystore "$keystore" \
+          certificate="$(keytool -exportcert -storetype PKCS12 -keystore "$keystore" \
             -alias "$WALKMAN_SIGNING_KEY_ALIAS" -storepass:env WALKMAN_SIGNING_STORE_PASSWORD | sha256sum)"
           if [[ "${certificate%% *}" != "$expected" ]]; then
             echo 'The supplied signing entry does not match the reviewed production certificate.' >&2
@@ -101,7 +101,7 @@ jobs:
           inputs="$RUNNER_TEMP/production-signing-input"
           sign_apk() {
             "$tools/zipalign" -c -P 16 4 "$1"
-            "$tools/apksigner" sign --ks "$keystore" \
+            "$tools/apksigner" sign --ks "$keystore" --ks-type PKCS12 \
               --ks-key-alias "$WALKMAN_SIGNING_KEY_ALIAS" \
               --ks-pass env:WALKMAN_SIGNING_STORE_PASSWORD \
               --key-pass env:WALKMAN_SIGNING_KEY_PASSWORD \

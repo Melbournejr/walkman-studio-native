@@ -1,44 +1,29 @@
 # Production Android signing
 
-The first production release is Stage 12, version 108 / 1.4.0-audio-engine, with package ID `com.walkmanstudio.nativeplayer`. The production pin in `release/production.properties` remains blank until the owner provisions the key. Builds with a blank pin skip OTA discovery, and the signing and publication jobs fail before using credentials or publishing assets.
+The first production release is Stage 12, version 108 / 1.4.0-audio-engine, with package ID `com.walkmanstudio.nativeplayer`. The permanent production certificate SHA-256 is `7eb99711e4f1a8d5986a47cd60641055e3e88b61247a1cc347d3f202f6126ee4`. Both APK verification and the app's OTA trust policy read the pin from `release/production.properties`.
 
 ## Owner provisioning
 
-Generate the key on an owner-controlled workstation using JDK 21. Choose an encrypted location outside the source checkout. Use a password manager to create and store a strong, unique keystore password. At the local prompt, enter that password. PKCS#12 uses the same password for the keystore and its private entry.
+Use the existing owner-controlled PKCS#12 keystore and its `walkman-release` alias. Keep it outside the checkout. Restore an independent encrypted backup on a trusted machine, confirm that the restored entry can sign a disposable APK, and compare the signer's public fingerprint with the registered pin.
 
-```sh
-umask 077
-keytool -genkeypair -storetype PKCS12 \
-  -keystore /secure/local/path/walkman-production.p12 \
-  -alias walkman-production -keyalg RSA -keysize 4096 -sigalg SHA256withRSA \
-  -validity 10000 -dname 'CN=Walkman Studio Native Production'
-```
+In GitHub, open **Settings → Environments → New environment** and create `production-signing`. Configure required reviewers and restrict deployments to the `main` branch. Once the encrypted backup has passed the restore test, set the environment variable `WALKMAN_BACKED_UP_CERTIFICATE_SHA256` to the lowercase fingerprint above. In that same environment, create these four secrets.
 
-Make an independently stored encrypted backup. Restore it on a trusted machine and confirm the restored entry can sign a disposable APK. Compare its public fingerprint with the original. Keep the key and password inside owner-controlled storage and protected GitHub settings.
-
-```sh
-set -o pipefail
-keytool -exportcert -storetype PKCS12 \
-  -keystore /secure/local/path/walkman-production.p12 -alias walkman-production | sha256sum
-```
-
-Commit only that lowercase SHA-256 in `release/production.properties`. In GitHub, configure the `production-signing` environment with required reviewers and deployments restricted to reviewed `main`. After the backup restore test, set the environment variable `WALKMAN_BACKED_UP_CERTIFICATE_SHA256` to the same public fingerprint. Add four environment secrets.
-
-| GitHub secret | Owner-provided value |
+| Environment secret | Value |
 | --- | --- |
-| `WALKMAN_SIGNING_KEYSTORE_B64` | Base64 of the PKCS#12 file |
-| `WALKMAN_SIGNING_STORE_PASSWORD` | Keystore password |
-| `WALKMAN_SIGNING_KEY_ALIAS` | `walkman-production` |
-| `WALKMAN_SIGNING_KEY_PASSWORD` | Same password as the PKCS#12 keystore |
+| `WALKMAN_SIGNING_KEYSTORE_B64` | Single-line Base64 of the existing PKCS#12 file |
+| `WALKMAN_SIGNING_STORE_PASSWORD` | PKCS#12 keystore password |
+| `WALKMAN_SIGNING_KEY_ALIAS` | `walkman-release` |
+| `WALKMAN_SIGNING_KEY_PASSWORD` | Password for that private entry, normally the same as the PKCS#12 keystore password |
 
-If GitHub CLI is already authorized on the workstation, the keystore can be sent directly without printing it or creating a plaintext Base64 file.
+With GitHub CLI authenticated on Windows, use PowerShell to stream the Base64 directly to GitHub. Replace the example path with the path to the existing file.
 
-```sh
-base64 < /secure/local/path/walkman-production.p12 | gh secret set WALKMAN_SIGNING_KEYSTORE_B64 \
-  --env production-signing --repo Melbournejr/walkman-studio-native
+```powershell
+$keystore = 'C:\secure\walkman-release.p12'
+[Convert]::ToBase64String([IO.File]::ReadAllBytes($keystore)) |
+  gh secret set WALKMAN_SIGNING_KEYSTORE_B64 --env production-signing --repo Melbournejr/walkman-studio-native
 ```
 
-Use GitHub's protected UI or the interactive CLI prompts for the other secrets.
+Use GitHub's protected UI or the interactive `gh secret set NAME --env production-signing --repo Melbournejr/walkman-studio-native` prompt for the remaining secrets. The workflow decodes the Base64 to a restricted temporary file, checks the certificate at the configured alias, supplies passwords to the Android signing tools through environment variables, and deletes the temporary file on exit.
 
 ## Release gates
 
