@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           assets="$RUNNER_TEMP/stage12"
-          source_commit="$(git rev-parse HEAD)"
+          source_commit="$(jq -er .nativeCommit distribution/stage12/READY.json)"
           gh release create stage12 "$assets"/* --target "$source_commit" --draft \
             --title 'Walkman Studio Native 1.4.0 — Audio engine' \
             --notes 'Version 108. High-resolution PCM DSP, EQ transitions and observed audio routing.'

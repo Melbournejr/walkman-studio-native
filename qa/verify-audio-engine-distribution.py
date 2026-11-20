@@ -3,11 +3,13 @@
 """Verify the reviewed Stage 12 distribution independently of the signing host."""
 import base64
 import hashlib
+import io
 import json
 from pathlib import Path
 import re
 import subprocess
 import sys
+import zipfile
 
 if not __debug__:
     sys.exit("Distribution validation requires Python assertions to be enabled")
@@ -41,6 +43,21 @@ for record in records:
     data = base64.b64decode(b"".join(chunks), validate=True)
     assert len(data) == record["bytes"] and sha256(data) == record["sha256"], record["name"]
     (output / record["name"]).write_bytes(data)
+
+source_commit = manifest["nativeCommit"]
+assert re.fullmatch(r"[a-f0-9]{40}", source_commit)
+subprocess.run(["git", "merge-base", "--is-ancestor", source_commit, "HEAD"], check=True)
+roots = subprocess.check_output(["git", "ls-tree", "--name-only", "-z", source_commit])
+paths = [name.decode() for name in roots.split(b"\0") if name and name not in (b"distribution", b"downloads")]
+canonical_zip = subprocess.check_output([
+    "git", "archive", "--format=zip", "--prefix=walkman-studio-native/", source_commit, "--", *paths,
+])
+with zipfile.ZipFile(io.BytesIO(canonical_zip)) as canonical, zipfile.ZipFile(output / source_name) as actual:
+    assert actual.namelist() == canonical.namelist(), "Source archive file list differs from the reviewed commit"
+    for item in canonical.infolist():
+        installed = actual.getinfo(item.filename)
+        assert installed.external_attr == item.external_attr, item.filename
+        assert actual.read(installed) == canonical.read(item), item.filename
 
 apk = output / apk_name
 signature = subprocess.check_output(
