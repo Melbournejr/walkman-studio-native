@@ -128,7 +128,8 @@ class PlaybackService : MediaLibraryService() {
         }, observedTrack = { if(revision==renderRevision) usb.attached(it,rendererBypassesDsp) },
             releasedTrack = usb::released, observedVolume = usb::volume)
         val baseExtractors=DefaultExtractorsFactory().setMp3ExtractorFlags(Mp3Extractor.FLAG_ENABLE_INDEX_SEEKING)
-        val extractors=ExtractorsFactory { arrayOf<androidx.media3.extractor.Extractor>(DsdExtractor(levelState=dsdLevel) { event,detail -> log.record(event,"$detail; model=${Build.MODEL}; sdk=${Build.VERSION.SDK_INT}; abi=${Build.SUPPORTED_ABIS.firstOrNull()}") }) + baseExtractors.createExtractors() }
+        val activeDsdLevel = if (rendererBypassesDsp) DsdLevelState() else dsdLevel
+        val extractors=ExtractorsFactory { arrayOf<androidx.media3.extractor.Extractor>(DsdExtractor(levelState=activeDsdLevel) { event,detail -> log.record(event,"$detail; model=${Build.MODEL}; sdk=${Build.VERSION.SDK_INT}; abi=${Build.SUPPORTED_ABIS.firstOrNull()}") }) + baseExtractors.createExtractors() }
         val result=ExoPlayer.Builder(this,renderers)
             .setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(10000,30000,500,1000).setTargetBufferBytes(8*1024*1024).setPrioritizeTimeOverSizeThresholds(false).build())
             .setMediaSourceFactory(DefaultMediaSourceFactory(SafAudioDataSource.factory(this),extractors))
@@ -161,11 +162,22 @@ class PlaybackService : MediaLibraryService() {
         val old=player;val items=(0 until old.mediaItemCount).map(old::getMediaItemAt)
         val index=old.currentMediaItemIndex.coerceAtLeast(0);val position=old.currentPosition.coerceAtLeast(0)
         val requested=old.playWhenReady;val repeat=old.repeatMode
+        val shuffle = old.shuffleModeEnabled
+        val wasPrepared = old.playbackState != Player.STATE_IDLE
+        val parameters = old.playbackParameters
+        val volume = old.volume
         queueRevision++;old.removeListener(playerEvents);old.pause()
         sourceSignal=null;decodedSignal=null;outputSignal=null;decoderName="Chưa khởi tạo decoder"
         player=buildPlayer();session?.setPlayer(player);old.release()
-        player.repeatMode=repeat
-        if(items.isNotEmpty()) { player.setMediaItems(items,index.coerceAtMost(items.lastIndex),position);if(requested) {player.prepare();player.play()} }
+        player.repeatMode = repeat
+        player.shuffleModeEnabled = shuffle
+        player.playbackParameters = parameters
+        player.volume = volume
+        if (items.isNotEmpty()) {
+            player.setMediaItems(items, index.coerceAtMost(items.lastIndex), position)
+            if (wasPrepared || requested) player.prepare()
+            player.playWhenReady = requested
+        }
         log.record("dsp_route_rebuilt","sourceDirect=${dsp.config.get().sourceDirect}; positionMs=$position")
     }
     override fun onCreate() {
@@ -176,7 +188,7 @@ class PlaybackService : MediaLibraryService() {
         selection = TrackFilter.decode(PlaybackMemory.preferences(this).getString("selection", null))
         dsp=DspState(DspSettings.read(this))
         dsdLevel=DsdLevelState(DsdLevelSettings.read(this))
-        usb=UsbAudioRoute(this,mainHandler,log,{dsp.config.get().sourceDirect},{dsdLevel.gainDb},{updateSessionExtras()})
+        usb=UsbAudioRoute(this,mainHandler,log,{dsp.config.get().sourceDirect},{if (dsp.config.get().sourceDirect) 0 else dsdLevel.gainDb},{updateSessionExtras()})
         player=buildPlayer()
         val builder = MediaLibrarySession.Builder(this, player, SessionCallback())
         packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
@@ -399,6 +411,7 @@ class PlaybackService : MediaLibraryService() {
             putLong("sleepAt",sleepAt)
             if(::usb.isInitialized) {
                 val status=usb.status
+                usb.addOutputDiagnostics(this)
                 putBoolean("usbAvailable",status.available);putBoolean("usbRequested",status.requested)
                 putBoolean("usbVerified",status.verified);putString("usbReason",status.reason)
                 putBoolean("usbConnected",usb.usbConnected)
