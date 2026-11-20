@@ -1,0 +1,555 @@
+{
+  "versionCode": 108,
+  "versionName": "1.4.0-audio-engine",
+  "nativeCommit": "61eec63daac8804dbba9070955b3f982bfbc436e",
+  "certificateSha256": "7eb99711e4f1a8d5986a47cd60641055e3e88b61247a1cc347d3f202f6126ee4",
+  "certificatePem": "-----BEGIN CERTIFICATE-----\nMIIFVjCCAz6gAwIBAgIJAOMNYcZ9JFfvMA0GCSqGSIb3DQEBDAUAMFgxCzAJBgNV\nBAYTAlZOMRcwFQYDVQQKEw5XYWxrbWFuIFN0dWRpbzEQMA4GA1UECxMHQW5kcm9p\nZDEeMBwGA1UEAxMVV2Fsa21hbiBTdHVkaW8gTmF0aXZlMCAXDTI2MTEyMDA2NTU1\nMFoYDzIwNTQwNDA3MDY1NTUwWjBYMQswCQYDVQQGEwJWTjEXMBUGA1UEChMOV2Fs\na21hbiBTdHVkaW8xEDAOBgNVBAsTB0FuZHJvaWQxHjAcBgNVBAMTFVdhbGttYW4g\nU3R1ZGlvIE5hdGl2ZTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALXo\nDPXE0oNC8+gxTKqRPqrBCX1/+VYKqK0S4MYpFQq0CJeCZVOnFilw0l5CO9mb2+TH\nnLdXMS9DX7sOlHokSSn91yE/fWH5llRGj2R2Q693MPgHZnEd4iM8RuTXQKeTzrMR\nH+xcZI2xtK79dVPBgN/GEm5xqyYH4e0rQcu/OYt39BSuiUb/EK/ofYVepD5/gJt5\nj6yVUtcGe4ejsPJJSnjJWuThNoI6ps95/DywjUo9BYVZrVhPs/251qB7PgKI0PRg\nMs5caeffyMoj9zUmaFi1Q9DS/+lqNV4UWU/VuR4+tTwrfF+Ykky9WFLC2gbK1LW9\nyzuTvYjz2b/hqm4BjCuyy48X9fjfyJcagJg2G53BNcP6EIzw9yFbTFaSWJ+4jplX\nTDH6xD1D6zi3hzul7zN8XVhgUZg7x/SJ9Ro4uCRDHa40o2z4+KcJyNyMyzD9vdAr\n5yF4jTxEjfTv32j2w0XEFNikiSU8Y4LSjBnKsBGEecvFOoWBgo7dUsdJk9f/0bhY\negpL+GdalS8mWzNPtSX/p+SIyN64guB2X6HNQUV9xDRKWVTnQVawCpakfOSt6VO0\nxQ+RPA2NBgm65eiwKXpwO1QVtpqV67rbOIx4zgxbr2qvd8uxJi4NNqN8Smdjct8T\nmY3tmXF1od7+p7WSd9y4iVpaCcNxTauFCcWTXhg5AgMBAAGjITAfMB0GA1UdDgQW\nBBRK2EOrGRLD4Yh58NkXExzVaWQ7XDANBgkqhkiG9w0BAQwFAAOCAgEAtBfJ+Jta\n+kRLO5ETOlziEwY8IZJQBwLe1Q3tqlPq9XQxa9SlbKoYcYQmpW1dCpPTxLtxsyHe\nggk1HANPuQZDlTDZsez+WxbM169bh5Xr+7wKNbR5l3JG1bCz1VFiGoeZViqb7N7S\nF6+usYt2j2EX9SMh57Wog5rfRpo6GtI+EM46Y9gUd1E9zsBJnXhhRpOrxYpi+15J\njq/Ao3JpXkngWi2Szhw77R5RhyEfvnq5tOMuzXtGgvCDOm8FUU0DiMRFW05sZZny\n2OOnp9jpb9gFcTJsV4RcFxqgrW4h0WhaR2WzMRpvkSfq/DbbSt2ycZYvOAepnWwF\nP8GB2vl4suSWlzZ9Rr8ySWXH4nysG/4FETL9F6HItfmCqh4zdGTEmX3xFrA430j4\naS0QcLZqs8lD6Ideric/iRWXyF39jnVSVzD5wABq7kaLCrmMs24ge1xY1YLvYAED\njbAkeIAAuGXcGPf5SaIOGgmzkcA6onV3pwBYj/7yQ08iJZyHJjyQAQyCgvcWo8rD\nFjVlcdjawQnuRAMIKk74P0fw3TFdbIwX6LzgddffwAzFvhaxbWZkIm9H2BTjHECm\noexC6buWQi02jbAHDuQlRQFR0mqA94QHJzdjgzOLQ/JxuPOxQwJ89oRxrx2y9wfg\nRyK5Ql9c8NKDaHw0IGmJNP5oaCSlefA6gq0=\n-----END CERTIFICATE-----\n",
+  "signature": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): true\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1\nSigner #1 certificate DN: CN=Walkman Studio Native, OU=Android, O=Walkman Studio, C=VN\nSigner #1 certificate SHA-256 digest: 7eb99711e4f1a8d5986a47cd60641055e3e88b61247a1cc347d3f202f6126ee4\nSigner #1 certificate SHA-1 digest: 421177043c8502b94c01b8cffbe1b7f06980ebab\nSigner #1 certificate MD5 digest: 40a71ec72648d9f0ff5c9df90ffc0b6d\nSigner #1 key algorithm: RSA\nSigner #1 key size (bits): 4096\nSigner #1 public key SHA-256 digest: 11d6bb5a4ee7785e2605212c53bf7b865910c610c993989c8ccd5306b1b04580\nSigner #1 public key SHA-1 digest: 02096f6ead20ae7a9ab43c9e0638a7d93e8276f3\nSigner #1 public key MD5 digest: 09ed0fd6df678b5bc7bf797a567dd549\n-----BEGIN CERTIFICATE-----\nMIIFVjCCAz6gAwIBAgIJAOMNYcZ9JFfvMA0GCSqGSIb3DQEBDAUAMFgxCzAJBgNV\nBAYTAlZOMRcwFQYDVQQKEw5XYWxrbWFuIFN0dWRpbzEQMA4GA1UECxMHQW5kcm9p\nZDEeMBwGA1UEAxMVV2Fsa21hbiBTdHVkaW8gTmF0aXZlMCAXDTI2MTEyMDA2NTU1\nMFoYDzIwNTQwNDA3MDY1NTUwWjBYMQswCQYDVQQGEwJWTjEXMBUGA1UEChMOV2Fs\na21hbiBTdHVkaW8xEDAOBgNVBAsTB0FuZHJvaWQxHjAcBgNVBAMTFVdhbGttYW4g\nU3R1ZGlvIE5hdGl2ZTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALXo\nDPXE0oNC8+gxTKqRPqrBCX1/+VYKqK0S4MYpFQq0CJeCZVOnFilw0l5CO9mb2+TH\nnLdXMS9DX7sOlHokSSn91yE/fWH5llRGj2R2Q693MPgHZnEd4iM8RuTXQKeTzrMR\nH+xcZI2xtK79dVPBgN/GEm5xqyYH4e0rQcu/OYt39BSuiUb/EK/ofYVepD5/gJt5\nj6yVUtcGe4ejsPJJSnjJWuThNoI6ps95/DywjUo9BYVZrVhPs/251qB7PgKI0PRg\nMs5caeffyMoj9zUmaFi1Q9DS/+lqNV4UWU/VuR4+tTwrfF+Ykky9WFLC2gbK1LW9\nyzuTvYjz2b/hqm4BjCuyy48X9fjfyJcagJg2G53BNcP6EIzw9yFbTFaSWJ+4jplX\nTDH6xD1D6zi3hzul7zN8XVhgUZg7x/SJ9Ro4uCRDHa40o2z4+KcJyNyMyzD9vdAr\n5yF4jTxEjfTv32j2w0XEFNikiSU8Y4LSjBnKsBGEecvFOoWBgo7dUsdJk9f/0bhY\negpL+GdalS8mWzNPtSX/p+SIyN64guB2X6HNQUV9xDRKWVTnQVawCpakfOSt6VO0\nxQ+RPA2NBgm65eiwKXpwO1QVtpqV67rbOIx4zgxbr2qvd8uxJi4NNqN8Smdjct8T\nmY3tmXF1od7+p7WSd9y4iVpaCcNxTauFCcWTXhg5AgMBAAGjITAfMB0GA1UdDgQW\nBBRK2EOrGRLD4Yh58NkXExzVaWQ7XDANBgkqhkiG9w0BAQwFAAOCAgEAtBfJ+Jta\n+kRLO5ETOlziEwY8IZJQBwLe1Q3tqlPq9XQxa9SlbKoYcYQmpW1dCpPTxLtxsyHe\nggk1HANPuQZDlTDZsez+WxbM169bh5Xr+7wKNbR5l3JG1bCz1VFiGoeZViqb7N7S\nF6+usYt2j2EX9SMh57Wog5rfRpo6GtI+EM46Y9gUd1E9zsBJnXhhRpOrxYpi+15J\njq/Ao3JpXkngWi2Szhw77R5RhyEfvnq5tOMuzXtGgvCDOm8FUU0DiMRFW05sZZny\n2OOnp9jpb9gFcTJsV4RcFxqgrW4h0WhaR2WzMRpvkSfq/DbbSt2ycZYvOAepnWwF\nP8GB2vl4suSWlzZ9Rr8ySWXH4nysG/4FETL9F6HItfmCqh4zdGTEmX3xFrA430j4\naS0QcLZqs8lD6Ideric/iRWXyF39jnVSVzD5wABq7kaLCrmMs24ge1xY1YLvYAED\njbAkeIAAuGXcGPf5SaIOGgmzkcA6onV3pwBYj/7yQ08iJZyHJjyQAQyCgvcWo8rD\nFjVlcdjawQnuRAMIKk74P0fw3TFdbIwX6LzgddffwAzFvhaxbWZkIm9H2BTjHECm\noexC6buWQi02jbAHDuQlRQFR0mqA94QHJzdjgzOLQ/JxuPOxQwJ89oRxrx2y9wfg\nRyK5Ql9c8NKDaHw0IGmJNP5oaCSlefA6gq0=\n-----END CERTIFICATE-----\n",
+  "update": {
+    "schema": 1,
+    "versionCode": 108,
+    "versionName": "1.4.0-audio-engine",
+    "minSdk": 26,
+    "bytes": 4186192,
+    "sha256": "0201b5193711f1cd0d208f4b4c7d61abcc6cf8953b5bdc60be2a4c14f9a768c0",
+    "url": "https://github.com/Melbournejr/walkman-studio-native/releases/download/stage12/walkman-native-stage12.apk",
+    "certificateSha256": "7eb99711e4f1a8d5986a47cd60641055e3e88b61247a1cc347d3f202f6126ee4",
+    "notes": "High-resolution PCM DSP, EQ transitions, and observed audio routing."
+  },
+  "files": [
+    {
+      "name": "walkman-native-stage12.apk",
+      "bytes": 4186192,
+      "sha256": "0201b5193711f1cd0d208f4b4c7d61abcc6cf8953b5bdc60be2a4c14f9a768c0",
+      "parts": [
+        {
+          "name": "apk-000.b64",
+          "sha256": "038e1b57059b5b7a356c88f0b692bc00b81c0037e4b4c4b17f9bf72a60778d86"
+        },
+        {
+          "name": "apk-001.b64",
+          "sha256": "13cf6e26ada7be2fab36a0036dbd4848c7fa848df427c638e6530939c7259b75"
+        },
+        {
+          "name": "apk-002.b64",
+          "sha256": "8b8340eae34fa061d8a1d86896af2d4ab706457896e5ed687e456cadc16e6d72"
+        },
+        {
+          "name": "apk-003.b64",
+          "sha256": "7e01be475ae7f8225cf732e198d65ac4c16c9afd4009255a813e618ab6aa1179"
+        },
+        {
+          "name": "apk-004.b64",
+          "sha256": "ff28ba5e334ab7f13cf278d0743e6ace6b5a05ba76e59eec3cf20ce19f18a29e"
+        },
+        {
+          "name": "apk-005.b64",
+          "sha256": "40ebc444109dc5fec453eca4c901948144c62239bba29dae8fcbc983474af797"
+        },
+        {
+          "name": "apk-006.b64",
+          "sha256": "86c06248d7ae30e460d7ec669deca799cf49e98ec03bfe7f62e3778aee318e09"
+        },
+        {
+          "name": "apk-007.b64",
+          "sha256": "3a2d2fe8c6122794ed0270468f8183378f72142b4a64f8f79e66a1b068a520d7"
+        },
+        {
+          "name": "apk-008.b64",
+          "sha256": "37d9ce1e262bc64808f3cbaaf4bfc4b3654e80e88bd7a9fbb3af202b338cdc14"
+        },
+        {
+          "name": "apk-009.b64",
+          "sha256": "a801042a621072015d851371887bfd8fb142d56bde7e6af9deddad1699e78152"
+        },
+        {
+          "name": "apk-010.b64",
+          "sha256": "8c45457a38a42506dbd99478033755f23f88127fc7a88bbd1efdb6216a714b33"
+        },
+        {
+          "name": "apk-011.b64",
+          "sha256": "ecc491a4b2b29f407dcd94fb19972cb9ee7317876f5c8438693aa3b0fcc41ab6"
+        },
+        {
+          "name": "apk-012.b64",
+          "sha256": "a4341dafc01b369222ce11854fb7c43c13f359055a8a1af82cdb4331b51929ca"
+        },
+        {
+          "name": "apk-013.b64",
+          "sha256": "029f40b2c6a34433fb6452afbf5f04083df8ea4e4f5d0f5b970bddc1b4eda435"
+        },
+        {
+          "name": "apk-014.b64",
+          "sha256": "8deaac38fd01d7d014fa4ba63517cf2e82514056c7ee57a9dcaf45aa8e968fd1"
+        },
+        {
+          "name": "apk-015.b64",
+          "sha256": "2a734ec2966cd5780a174adc588ebd40b82c7104d39660412fc952ab1108c317"
+        },
+        {
+          "name": "apk-016.b64",
+          "sha256": "11c4665db2456486c5fb2ff3358940d7866f676cc6cac1b5ad23330ea950d510"
+        },
+        {
+          "name": "apk-017.b64",
+          "sha256": "aa6ea9b3546782a22b8352be0294b31611bfbb09a6cde0e4eed6fd2eb5f8556d"
+        },
+        {
+          "name": "apk-018.b64",
+          "sha256": "a0b539e63d1d534531969d2b4a1e1dbacfe6747c5e494539f70589141034ae6b"
+        },
+        {
+          "name": "apk-019.b64",
+          "sha256": "17121cd0fa81300ddc04c794bfa0ce3b8023bbba0e960cd4cf8279ffc08ad0f0"
+        },
+        {
+          "name": "apk-020.b64",
+          "sha256": "4be93c08d610a3aacf53f027d5318bfc46cf8927e8a0a0ca74fcdc52bd9f6e46"
+        },
+        {
+          "name": "apk-021.b64",
+          "sha256": "b61b9bca3dc47ded3c333d0804bf788be1e33f2208772573548f08f9f0306466"
+        },
+        {
+          "name": "apk-022.b64",
+          "sha256": "c2c158871a73e7f39b74daacbdc568ecb6a785ef6770ee3e418633ee6e53d6ef"
+        },
+        {
+          "name": "apk-023.b64",
+          "sha256": "efc6f22d76708c701725a09f0c4dca2fb93210daef4fd2c27f371313d6eeb559"
+        },
+        {
+          "name": "apk-024.b64",
+          "sha256": "6753a3985bac808ef1a5292935bb460766be5a8ba32aa275cba4351cec07c07c"
+        },
+        {
+          "name": "apk-025.b64",
+          "sha256": "0e4d519ede6cad39b32b0079696122813968b6a0a2bb5d721f245b4d2440f751"
+        },
+        {
+          "name": "apk-026.b64",
+          "sha256": "166cbf439c58d869d6043bd93d466ba1b8990d7d00b32dd31dd3f2e953c2c72b"
+        },
+        {
+          "name": "apk-027.b64",
+          "sha256": "74b5152943caeeda28c841dc2b72fd18a5817f96d2a013a9c540707f489acb2a"
+        },
+        {
+          "name": "apk-028.b64",
+          "sha256": "cb471d1ef35a2f6cee856f0aa6990d91a99298187c5ac311377286066a72f886"
+        },
+        {
+          "name": "apk-029.b64",
+          "sha256": "cd5071d136929d4739d479f75bd6a9f680c072cf6405a9329bf0b53715a73e79"
+        },
+        {
+          "name": "apk-030.b64",
+          "sha256": "c5962725e3d266b0e037795eb49390ed5288a079f86908c5d4c4ea10997a9dda"
+        },
+        {
+          "name": "apk-031.b64",
+          "sha256": "015e9b4f7daee74a0ec6bce454f8ed1f41bf195c4336fcb4ef6bb6de799a5b45"
+        },
+        {
+          "name": "apk-032.b64",
+          "sha256": "fecb645f97529979f287242637bc99776b6c85310c02568854ce03d32c3b885b"
+        },
+        {
+          "name": "apk-033.b64",
+          "sha256": "088521e86ed3d5d9abfc5b30bdb4a7c31fca8012f354bcefa25faeaf9a88daf1"
+        },
+        {
+          "name": "apk-034.b64",
+          "sha256": "3b844eaa8e4f826adbba39d24887f6a9b7c40d4e408387b5b4812407aed17949"
+        },
+        {
+          "name": "apk-035.b64",
+          "sha256": "f66546506c54d11a96e998df4d3f24c022d9f67e45a7b7ff0a98f11b171e235c"
+        },
+        {
+          "name": "apk-036.b64",
+          "sha256": "1c97a1a4515eeccf29d8dd1706372b26ea745d1df4069b6ea9544dfab989f463"
+        },
+        {
+          "name": "apk-037.b64",
+          "sha256": "936cfe49fa4b5100758e425a6ac12336d92c2f7d698a096fde232aced412f27a"
+        },
+        {
+          "name": "apk-038.b64",
+          "sha256": "e37058c6cf8029b51ef5d714e28c7290779e9b7d7476948195258e30c6a64869"
+        },
+        {
+          "name": "apk-039.b64",
+          "sha256": "2e7921d078044e4fae90ae5c5d8fb8fa8439560fca42680409f950a2c12da0f5"
+        },
+        {
+          "name": "apk-040.b64",
+          "sha256": "33d1c281baf054fa59e69058bdc5f26f6ac5cfb3dd78b634da81b02af3445777"
+        },
+        {
+          "name": "apk-041.b64",
+          "sha256": "a8b923f0e188b6c2c971562c202c3b4393fb062955fea18d213d8cd676cbb79a"
+        },
+        {
+          "name": "apk-042.b64",
+          "sha256": "f00ccdfef69fe699caa5727e878c2e263c4c26b1f95089971c1c7fd32f398b8a"
+        },
+        {
+          "name": "apk-043.b64",
+          "sha256": "ab279411fb1d972fa80b6eaeb492052ea9f1e299d49e7c2bb848e71b4adeb2c5"
+        },
+        {
+          "name": "apk-044.b64",
+          "sha256": "e5988254b51895395de288ef55fcd63c459bbfd1ac93c559ca537cc4757f1337"
+        },
+        {
+          "name": "apk-045.b64",
+          "sha256": "c77d75343b8fd09871be3dab12b4d209f98ec23762487e1c3c46e2abdd2dfa60"
+        },
+        {
+          "name": "apk-046.b64",
+          "sha256": "b00faea5f5d78c1421296cfd6db56040f121392f892dc0c038fff95472ac09c2"
+        },
+        {
+          "name": "apk-047.b64",
+          "sha256": "d9c93d01cb70b43d05ff229933c72c399710659ae0b547551383b10a08cb8a12"
+        },
+        {
+          "name": "apk-048.b64",
+          "sha256": "f21c18442c39f937734a3193c2773832410a31e71944a970c6802ef1eb30393c"
+        },
+        {
+          "name": "apk-049.b64",
+          "sha256": "d16ed2389edb6b638042adad995325faa2cdb7298666c61f8d96afa3f728cddb"
+        },
+        {
+          "name": "apk-050.b64",
+          "sha256": "2f2b207095f44eaf07739850e47a5140a031d550b945d7f378978f6ddfd257f6"
+        },
+        {
+          "name": "apk-051.b64",
+          "sha256": "149af1e6f4de2fefb0d73387685eada12001d78d0d8c235d1b7bd0283f01ee2d"
+        },
+        {
+          "name": "apk-052.b64",
+          "sha256": "b7657d71c289739e5e752d8e89efa2e20943015852780540d789013412420ebc"
+        },
+        {
+          "name": "apk-053.b64",
+          "sha256": "4bd22adc70a08763262cc1a9accb20697c9a4280815ff781015539c0bfa24c8d"
+        },
+        {
+          "name": "apk-054.b64",
+          "sha256": "045fd8dc1d079606e5ea922e93e1fd21b666fb9719ddc3765306d3e2c8ec2097"
+        },
+        {
+          "name": "apk-055.b64",
+          "sha256": "411ff40dcbea613b9ac808b81aeaaf3707c11336c8cd5d1056658a12254be9a0"
+        },
+        {
+          "name": "apk-056.b64",
+          "sha256": "9f1738fd94f81902996d2ce146b9f76a2dc1c703a5836e6f4e2b4230095e89fb"
+        },
+        {
+          "name": "apk-057.b64",
+          "sha256": "6ccfa4bd9177accc042f6507bc1d1f931f74aaa795f7a056db85d57d26d7e817"
+        },
+        {
+          "name": "apk-058.b64",
+          "sha256": "7af14ed17264aba77de142fb80bcd4fa91ddaf0a1917440c2c472f1e10072b8a"
+        },
+        {
+          "name": "apk-059.b64",
+          "sha256": "8bad201b19c061d39bad033c78b78fe003497041f4e62b26ca9279c3c76215e3"
+        },
+        {
+          "name": "apk-060.b64",
+          "sha256": "ec345ae2b49edb6ddd13dd334712e0d5ef3b885734b683c6c57a3fe7f7ae5e47"
+        },
+        {
+          "name": "apk-061.b64",
+          "sha256": "f9321e81dafa9f0c7261dba572cb58c9f919c2a65ba716379e8135c82152f242"
+        },
+        {
+          "name": "apk-062.b64",
+          "sha256": "635f99f004c34fe602c01c7d31b57b7ef509d4a1b918595a04b8a18234630ec0"
+        },
+        {
+          "name": "apk-063.b64",
+          "sha256": "572540eccace98cdaf8364dc6849984d6439b9f7bbd79045ab7bff231c49fc65"
+        },
+        {
+          "name": "apk-064.b64",
+          "sha256": "876e022d02b16118025928ec91a98126435f41cb11ba46eb4d1de6989d20bc84"
+        },
+        {
+          "name": "apk-065.b64",
+          "sha256": "931cbbc1c623d615c2028ed05363e83d9c411d3acd4ad81b3b62c6d72c900a5e"
+        },
+        {
+          "name": "apk-066.b64",
+          "sha256": "34f794d5be41fa0bb1b57e2c14a792507354115f64ad7d4e0a0bd38903ef0c3c"
+        },
+        {
+          "name": "apk-067.b64",
+          "sha256": "189b2d0a47690d04bcb2fcb96d6a403f3514b1f387b943283f6cb91a9faf5580"
+        },
+        {
+          "name": "apk-068.b64",
+          "sha256": "398147661f256460ca6fd099783b27ef12c49b29c1c27aaa8dd1f1f17bebcfe2"
+        },
+        {
+          "name": "apk-069.b64",
+          "sha256": "001cd89090dce60678a54008a1d8fba201e61860c56802119983304d24a89485"
+        },
+        {
+          "name": "apk-070.b64",
+          "sha256": "0a627ccda62ecde85fd922ae5639b3d1b8c38a07cc30680e6ce97b956b7b9f98"
+        },
+        {
+          "name": "apk-071.b64",
+          "sha256": "bd0e3248c46c6d96dee9be7fb6c4c2f965b1f7cdcdfbfc7396d1b95e5002baee"
+        },
+        {
+          "name": "apk-072.b64",
+          "sha256": "5c18cb5f9836285f1b9810b18534277e6b1583f5e28920adf526dbc94fcb08e9"
+        },
+        {
+          "name": "apk-073.b64",
+          "sha256": "fd08037d377d99d8fdd115de6682bb5e6b017a165f7871aaab41a4d4e15d147c"
+        },
+        {
+          "name": "apk-074.b64",
+          "sha256": "14a2946d59b4c1afbe49902db37ea3f195a1336e9876f510bcc0a3457d892d5c"
+        },
+        {
+          "name": "apk-075.b64",
+          "sha256": "8ebb4412ee7c84417fbc61c553c1c977cf8e239a61f2d6fc8cda14c2511e6451"
+        },
+        {
+          "name": "apk-076.b64",
+          "sha256": "e06d9e56d9d063a60e332c236f7c5fbb5c7782306dc74a26c9af6f2647274052"
+        },
+        {
+          "name": "apk-077.b64",
+          "sha256": "faf07524e5cccc0de3b73a1c4973d4469cd7d5a3e1368c9bfb8c7ed51ab0bd7a"
+        },
+        {
+          "name": "apk-078.b64",
+          "sha256": "f76491d8600f91fbb9ca9073f0c8be16603e70c79cdb33ae7345a5586e90e8b4"
+        },
+        {
+          "name": "apk-079.b64",
+          "sha256": "42c5c5de3d943d51a99fe72e7612b0c5bed9c0ca8ffbc466bad7c4b10b8c08e0"
+        },
+        {
+          "name": "apk-080.b64",
+          "sha256": "588e1fe00b0f8f373089ec0b6557a18c372ad5096d17dca82814ec43811dd6ce"
+        },
+        {
+          "name": "apk-081.b64",
+          "sha256": "b3065aabcfd58e8c4002c194dad5f371006ae0726bd84ed7377e9243d32f36db"
+        },
+        {
+          "name": "apk-082.b64",
+          "sha256": "2514fbcf360cb31285d9c7f4afdf15d887654aa109b71fc2c530098b9c6cd732"
+        },
+        {
+          "name": "apk-083.b64",
+          "sha256": "8d2757aafff46f58d988ea2f46921398c7b36aa170b9fec847ee01942a1d976c"
+        },
+        {
+          "name": "apk-084.b64",
+          "sha256": "3e737d04c94f5b5ea88901bfe157d4787e4464a7f96012980bcdce1403e9311e"
+        },
+        {
+          "name": "apk-085.b64",
+          "sha256": "8288592a4d84ec83c542a742953d5d974bce19cefeac7fd038902cb9b7693ded"
+        },
+        {
+          "name": "apk-086.b64",
+          "sha256": "f91f6b7147436b4352d0908fec0b8adbb419edffec77f73c8cbf0f9e5cd404d4"
+        },
+        {
+          "name": "apk-087.b64",
+          "sha256": "16f19ae4d0425acd7fa6d481eeda7730743129e8f75b10160611edebae24d807"
+        },
+        {
+          "name": "apk-088.b64",
+          "sha256": "82e557acb64fc89a8f217b8d68bfe333010732a870a012241deeab6715e93556"
+        },
+        {
+          "name": "apk-089.b64",
+          "sha256": "5c7b5dd6253bb4b8b41af262643c08ec34cd9f89d58e3b031a8a735874d89427"
+        },
+        {
+          "name": "apk-090.b64",
+          "sha256": "a7c19771a80d60d021df4e2eb1534ff28cd8fcfb75916731c060840bc0686b9c"
+        },
+        {
+          "name": "apk-091.b64",
+          "sha256": "867b924cfd5a95b6b721fd46d6615b6f74f9de34bd2de74d85b5b2a55398fc39"
+        },
+        {
+          "name": "apk-092.b64",
+          "sha256": "876372ba9e02606216b7ffc1c9ff36e53926dc309d6536c4f263e6d1b688e8e4"
+        },
+        {
+          "name": "apk-093.b64",
+          "sha256": "c64891e1cd7efac294c475385dfa3c40db5932ca338cfbbd264e2c71f6f3fd0e"
+        },
+        {
+          "name": "apk-094.b64",
+          "sha256": "2b89acd087c29d74ae06ea9522ea6bbfe96125e02da578a774006d1d694508c3"
+        },
+        {
+          "name": "apk-095.b64",
+          "sha256": "bba53418315849dd962c6aea3be7439c6ead22a7e9ae6ca75ad0d374bff78f21"
+        },
+        {
+          "name": "apk-096.b64",
+          "sha256": "2ef2d8fe3d1ead94792f8181741bbe8e33594210e8b45abdf2334de1d63e7a84"
+        },
+        {
+          "name": "apk-097.b64",
+          "sha256": "e70f4ec42eae41c15086726cc6717cd56daecbd595e6e0b3a7b6d6d67c03a4ed"
+        },
+        {
+          "name": "apk-098.b64",
+          "sha256": "b20874f8483f4b9555a0bc3028d0cccfa62ea77991c59592a1aac0a4ad91246f"
+        },
+        {
+          "name": "apk-099.b64",
+          "sha256": "b75aa8a81bfece1a82be4bc5a77fdb2194b23d093a6ad2b93ddf90524ddf0a30"
+        },
+        {
+          "name": "apk-100.b64",
+          "sha256": "fa651ba3ba8576b4f6eb41f3ebb2c5876e578b2c0937d4d393cfc66ef9b70bf1"
+        },
+        {
+          "name": "apk-101.b64",
+          "sha256": "5afa337499c9c8786518943ee5c5a44d8c48a088e9a1d806f66aaf6fce571c42"
+        },
+        {
+          "name": "apk-102.b64",
+          "sha256": "4c86c322d9ff6afa317b082c48581ac231ff9851c872d52a8cb185b8a1a5e787"
+        },
+        {
+          "name": "apk-103.b64",
+          "sha256": "df0989da18059578e5346eaa12ead8a23940caa312f779d72fa945b4957c85ae"
+        },
+        {
+          "name": "apk-104.b64",
+          "sha256": "aeda97d06d81c58da6eb36e1b1a554d237ed81e46762e13388f4202a02a51072"
+        },
+        {
+          "name": "apk-105.b64",
+          "sha256": "c242a3a20b54fe92768e22492b80fbe5652d948345aa445468a610629b3f59de"
+        },
+        {
+          "name": "apk-106.b64",
+          "sha256": "f41c48da66f83d267324bb913a173df5bd2c9c7bc0497ca9b14e451433cc6c22"
+        },
+        {
+          "name": "apk-107.b64",
+          "sha256": "a2a62bf1884332ba0f135420bdbb12c05aa4c0380ddcefc381d1a2a48ed76fe5"
+        },
+        {
+          "name": "apk-108.b64",
+          "sha256": "6215433f8fa5bc5cd9f5ae4a8bc89fc3ee2b5e051cefcb4970a6d2863e0109bb"
+        },
+        {
+          "name": "apk-109.b64",
+          "sha256": "a6bae56a39adce629edbff2e8965e3fb97f7b6011597b46146b73b51c055b9c8"
+        },
+        {
+          "name": "apk-110.b64",
+          "sha256": "92551171b0d1cff8ae435967aa7b3cdb5025203f6728f8b5f794068e9164f28f"
+        },
+        {
+          "name": "apk-111.b64",
+          "sha256": "bb24111d1259342d863327cdd985f6f15ff81d7b1e9772fca8bc97b5bc81a688"
+        },
+        {
+          "name": "apk-112.b64",
+          "sha256": "3ef9fcbeceaabc8c8682ba27a348a982ddd292c5ff29935677fb137a70bce953"
+        },
+        {
+          "name": "apk-113.b64",
+          "sha256": "dad8eba011aac1e868de46985a8a29357d62b16cef64f70367f6efd60f7989d8"
+        }
+      ]
+    },
+    {
+      "name": "walkman-native-stage12-code.zip",
+      "bytes": 553344,
+      "sha256": "b6dc8ebaaf4b6f8985ff810e5441334aa62abb7470c9d479fbb833ceaf21b17c",
+      "parts": [
+        {
+          "name": "source-000.b64",
+          "sha256": "f9131beb9450bce503802ad96b89b7202d6905d5cb39643a8c4f0765255f9111"
+        },
+        {
+          "name": "source-001.b64",
+          "sha256": "231898a106351dcfc12925f765382c78160d16ff4247420958bb30746f2235b1"
+        },
+        {
+          "name": "source-002.b64",
+          "sha256": "3e931fb54561b27ca11fd7925d33a4aaf7d93013c8b1dbe654dd29f1f3acc0b4"
+        },
+        {
+          "name": "source-003.b64",
+          "sha256": "6c67e1623f05aa8fba19018d32c86fb7602529a585cc16ac9c74ff35df416820"
+        },
+        {
+          "name": "source-004.b64",
+          "sha256": "27c3c0328125cbac7abc5570d9dbe8c8fc4400fa1bf5a87844a94cca3d233fe7"
+        },
+        {
+          "name": "source-005.b64",
+          "sha256": "ec9c030452e054ec65589767c12a81759c00fc060433c77f47e14b69485bcc17"
+        },
+        {
+          "name": "source-006.b64",
+          "sha256": "b39cb04f095ccbe3dc672a949d69d5579819cefb21d7f6c7576d839aec9d4ed5"
+        },
+        {
+          "name": "source-007.b64",
+          "sha256": "36d9f48a4ba921a08e11a1e3155e28ee1c6ba7e11d417845a811d5d7352e95f1"
+        },
+        {
+          "name": "source-008.b64",
+          "sha256": "7ff5cebdf097bd242f255ff59d87e4929666883954196de883e8424e64478f75"
+        },
+        {
+          "name": "source-009.b64",
+          "sha256": "956981b7ce00dcd77da05c18e7a2cbee3978b88c2dee3e2999a3e5da35b7d446"
+        },
+        {
+          "name": "source-010.b64",
+          "sha256": "14f11b037ead115d6aac457bc57e4db08e45faeea2fdd294481459ea1a46e295"
+        },
+        {
+          "name": "source-011.b64",
+          "sha256": "78fa354d606fa37ca0cc42c735d8b7acb322292d198a193268710041b45c3762"
+        },
+        {
+          "name": "source-012.b64",
+          "sha256": "fb0ad747285eb1e383bd44d0a29caf59a90d8e34f2fda5e1c95fe2535492f156"
+        },
+        {
+          "name": "source-013.b64",
+          "sha256": "bfe1002bfa024a73923f338c6d6afd6bbc3ae6a57a385cef4cab4bbe69ec4c23"
+        },
+        {
+          "name": "source-014.b64",
+          "sha256": "d9c58e35f3a8cb57d6be0caa4a129ee690b7200f1cf75c5c17ae820e78e3cba5"
+        },
+        {
+          "name": "source-015.b64",
+          "sha256": "204691842ccd9046b79b15d0420ba49f75a08b25530bda31e9f3fcc29eb0f136"
+        }
+      ]
+    }
+  ]
+}
