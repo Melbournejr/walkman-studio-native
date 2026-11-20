@@ -94,6 +94,8 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
             val sharedArt = Modifier.sharedElement(rememberSharedContentState("current-artwork"), animatedVisibilityScope = this@AnimatedContent)
             if (now) NowPlaying(playback,sharedArt,theme,displayMode,model::setWalkmanTheme, model::setNowPlayingMode, { track -> model.favorite(track) }) { model.showNowPlaying(false) }
             else Scaffold(
+                modifier = if (tab == "library") Modifier.mioGraphite() else Modifier,
+                containerColor = if (tab == "library") androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.background,
                 topBar = {
                     val back: (() -> Unit)? = when {
                         settingsDetail -> model::showSettingsHome
@@ -154,7 +156,7 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                                     Box(modifier) {
                                         val index = row * 2 + column
                                         if (index < albums.itemCount) albums[index]?.let { album ->
-                                            MioAlbumTile(album.album, album.artist, { model.openAlbum(album) }, leadRow = row == 0) { cover ->
+                                            MioAlbumTile(album.album, album.artist, { model.openAlbum(album) }) { cover ->
                                                 AlbumCover(album.coverKey, "${album.artist}|${album.album}", cover, large = true)
                                             }
                                         }
@@ -241,8 +243,8 @@ internal fun MioLibraryTabs(active: String, select: (String) -> Unit) {
 
 @Composable
 internal fun MioAlbumRow(tile: @Composable (Int, Modifier) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 5.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 25.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp)) {
         repeat(2) { tile(it, Modifier.weight(1f)) }
     }
 }

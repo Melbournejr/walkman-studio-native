@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.walkmanstudio.nativeplayer
 
+import androidx.compose.ui.platform.testTag
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
@@ -42,23 +43,23 @@ fun PlaybackPanel(model: PlaybackViewModel, artwork: Modifier = Modifier, open: 
 internal fun MioMiniPlayer(state: PlaybackUi, open: () -> Unit, toggle: () -> Unit,
     next: () -> Unit, cover: @Composable (Modifier) -> Unit) {
     if (state.id == null) return
-    Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f))) {
+    Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp).testTag("mio-mini-player"),
+        shape = RoundedCornerShape(11.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .48f))) {
         Column {
-            Row(Modifier.fillMaxWidth().heightIn(min = 62.dp).clickable(onClickLabel = "Mở Đang phát", onClick = open).padding(start = 10.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                cover(Modifier.size(46.dp))
+            Row(Modifier.fillMaxWidth().heightIn(min = 58.dp).clickable(onClickLabel = "Mở Đang phát", onClick = open).padding(start = 10.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                cover(Modifier.size(42.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(state.title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Serif), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (state.artist.isNotBlank()) Text(state.artist, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(state.title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (state.artist.isNotBlank()) Text(state.artist, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (state.error != null) StudioIcon(R.drawable.ic_error, "Chưa đọc được bài hát", Modifier.size(20.dp))
                 IconButton(onClick = toggle) { StudioIcon(if (state.requested) R.drawable.ic_pause else R.drawable.ic_play, if (state.requested) "Tạm dừng" else "Phát") }
                 IconButton(onClick = next) { StudioIcon(R.drawable.ic_next, "Bài tiếp") }
             }
-            LinearProgressIndicator(progress = { if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f }, modifier = Modifier.fillMaxWidth().height(2.dp))
+            LinearProgressIndicator(progress = { if (state.durationMs > 0) (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f }, modifier = Modifier.fillMaxWidth().height(1.5.dp))
         }
     }
 }
@@ -110,7 +111,10 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
             }
         }
     }
-    Scaffold(contentWindowInsets = WindowInsets.safeDrawing, topBar = {
+    val modern = mode == NowPlayingMode.CLASSIC
+    Scaffold(modifier = if (modern) Modifier.mioGraphite() else Modifier,
+        containerColor = if (modern) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets.safeDrawing, topBar = {
         if (mode == NowPlayingMode.CLASSIC) MioNowHeader(close, current?.isFavorite == true, current != null, actions.favorite) {
             Box {
                 IconButton(onClick = { displayMenu = true }) { StudioIcon(R.drawable.ic_more, "Tùy chọn Đang phát") }

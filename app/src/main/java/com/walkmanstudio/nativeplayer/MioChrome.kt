@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.walkmanstudio.nativeplayer
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,14 +36,14 @@ internal enum class MioDestination(val label: String, val icon: Int) {
 @Composable
 internal fun MioNavigation(active: MioDestination, select: (MioDestination) -> Unit) {
     val colors = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().background(colors.surface).navigationBarsPadding()) {
+    Column(Modifier.fillMaxWidth().testTag("mio-navigation").background(colors.surface).navigationBarsPadding()) {
         HorizontalDivider(color = colors.outlineVariant)
         Row(Modifier.fillMaxWidth().selectableGroup()) {
             MioDestination.entries.forEach { item ->
                 val selected = item == active
                 val ink = if (selected) colors.primary else colors.onSurfaceVariant
                 Column(
-                    Modifier.weight(1f).heightIn(min = 68.dp)
+                    Modifier.weight(1f).heightIn(min = 64.dp)
                         .selectable(selected, role = Role.Tab, onClick = { select(item) }).padding(vertical = 9.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(5.dp),
@@ -126,11 +127,12 @@ internal fun MioPanelRow(icon: Int, title: String, summary: String, minHeight: D
 }
 
 @Composable
-internal fun MioAlbumTile(title: String, artist: String, open: () -> Unit, leadRow: Boolean = true, art: @Composable (Modifier) -> Unit) {
+internal fun MioAlbumTile(title: String, artist: String, open: () -> Unit, art: @Composable (Modifier) -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = "Mở album", onClick = open),
         verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        art(Modifier.fillMaxWidth().aspectRatio(if (leadRow) 1.03f else 1.34f))
-        Text(title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Serif), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        art(Modifier.fillMaxWidth().aspectRatio(1f).testTag("mio-album-cover"))
+        Text(title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal,
+            fontSize = 15.sp, lineHeight = 18.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (artist.isNotBlank()) Text(artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }

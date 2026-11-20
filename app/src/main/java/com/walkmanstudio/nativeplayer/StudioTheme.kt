@@ -2,6 +2,11 @@
 // Copyright (C) 2026 Walkman Studio Native contributors
 package com.walkmanstudio.nativeplayer
 
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -66,4 +71,29 @@ fun StudioTheme(appearance: String, content: @Composable () -> Unit) {
         typography = MioTypography,
         content = content,
     )
+}
+
+
+// Broad graphite reflections track the screen bounds and are cached with the size.
+@Composable
+internal fun Modifier.mioGraphite(): Modifier {
+    val base = MaterialTheme.colorScheme.background
+    val strength = if (base.luminance() < .2f) 1f else .34f
+    return drawWithCache {
+        val glow = Brush.radialGradient(
+            listOf(Color(0xFF637087).copy(alpha = .22f * strength), Color.Transparent),
+            center = Offset(size.width * .15f, size.height * .20f),
+            radius = (size.height * .56f).coerceAtLeast(1f),
+        )
+        val lower = Brush.radialGradient(
+            listOf(Color(0xFF87818A).copy(alpha = .095f * strength), Color.Transparent),
+            center = Offset(size.width * .58f, size.height * .69f),
+            radius = (size.height * .37f).coerceAtLeast(1f),
+        )
+        onDrawBehind {
+            drawRect(base)
+            drawRect(glow)
+            drawRect(lower)
+        }
+    }
 }

@@ -3,6 +3,11 @@ package com.walkmanstudio.nativeplayer
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import android.view.View
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -41,6 +46,8 @@ class MioScreensTest {
     private val playing = PlaybackUi(id = "1", title = "Silver Current", artist = "North Window",
         album = "Quiet Circuits", durationMs = 245000, positionMs = 73000, timelineKnown = true,
         seekEnabled = true, requested = true, playbackState = androidx.media3.common.Player.STATE_READY)
+    private val referenceTrack = playing.copy(title = "First Light", artist = "Haru Takahashi",
+        album = "The Silent Season", durationMs = 296000, positionMs = 84000)
     private val signal = SignalUi(source = "FLAC · 24 bit · 96 kHz",
         decoded = "PCM · 24 bit · 96 kHz", output = "PCM · 48 kHz · 2 kênh",
         outputDevice = "AudioTrack")
@@ -67,6 +74,7 @@ class MioScreensTest {
 
     @Test fun captureAllReferenceScreens() {
         var mode by mutableStateOf("dark")
+        var compact by mutableStateOf(false)
         var pane by mutableStateOf(MioDestination.PLAYER)
         var extra by mutableStateOf("")
         var selectedQueueIndex = -1
@@ -78,7 +86,7 @@ class MioScreensTest {
         compose.setContent {
             view = LocalView.current
             StudioTheme(mode) {
-                val size = if (mode == "dark") 390.dp to 844.dp else 360.dp to 800.dp
+                val size = if (mode == "dark" && !compact) 390.dp to 844.dp else 360.dp to 800.dp
                 Surface(Modifier.size(size.first, size.second).testTag("mio-preview")) {
                     if (extra == "queue") {
                         MioQueue(listOf(
@@ -93,11 +101,12 @@ class MioScreensTest {
                         MioEqualizer(equalizer, {}, { equalizer = it }) {}
                     } else if (extra == "retro") {
                         CassettePlayerScreen(WalkmanTheme.MIO, CassetteScreenState(
-                            playing.title, playing.artist, playing.album, playing.positionMs, playing.durationMs,
+                            referenceTrack.title, referenceTrack.artist, referenceTrack.album, referenceTrack.positionMs, referenceTrack.durationMs,
                             playing = true, requested = true, queueIndex = 1, queueCount = 4, specs = specs),
                             CassetteActions(stop = { stopped = true }, toggle = { toggled = true },
                                 seek = { seekPosition = it }), visible = false)
-                    } else Column {
+                    } else Column(Modifier.then(if (pane == MioDestination.PLAYER || pane == MioDestination.LIBRARY)
+                        Modifier.mioGraphite() else Modifier)) {
                         if (pane == MioDestination.PLAYER) MioNowHeader({}, false, true, {}) {
                             IconButton(onClick = {}) { StudioIcon(R.drawable.ic_more, "Tùy chọn") }
                         } else MioHeader(pane.label, editorial = pane == MioDestination.LIBRARY) {
@@ -110,18 +119,18 @@ class MioScreensTest {
                         }
                         Box(Modifier.weight(1f)) {
                             when (pane) {
-                                MioDestination.PLAYER -> MioNowPlaying(playing, specs, CassetteActions(),
-                                    highResolutionSource = true) { FixtureCover(0, it) }
-                                MioDestination.LIBRARY -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    MioLibraryTabs("albums") {}
-                                    val fixtureAlbums = listOf("Quiet Circuits" to "North Window",
-                                        "Evergreen" to "Mara Vale", "Ribbons" to "Blue Avenue", "April Air" to "Amber Field",
-                                        "Distant Shore" to "Theo Lake", "After Hours" to "Mara Vale")
-                                    repeat(3) { row ->
+                                MioDestination.PLAYER -> MioNowPlaying(referenceTrack, specs, CassetteActions(),
+                                    highResolutionSource = true) { ReferenceCover("now-playing", it) }
+                                MioDestination.LIBRARY -> LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    item { MioLibraryTabs("albums") {} }
+                                    val fixtureAlbums = listOf("The Silent Season" to "Haru Takahashi",
+                                        "Blue Ridge" to "Norah Elm", "Chroma" to "Luca Moretti", "Mono No Aware" to "Sakura Ensemble",
+                                        "Silver Current" to "North Window", "Quiet Circuits" to "Amber Field")
+                                    items(3) { row ->
                                         MioAlbumRow { column, modifier ->
                                             val index = row * 2 + column
                                             val (title, artist) = fixtureAlbums[index]
-                                            Box(modifier) { MioAlbumTile(title, artist, {}, leadRow = row == 0) { FixtureCover(index, it) } }
+                                            Box(modifier) { MioAlbumTile(title, artist, {}) { ReferenceCover("album-$index", it) } }
                                         }
                                     }
                                 }
@@ -131,7 +140,9 @@ class MioScreensTest {
                                 MioDestination.SETTINGS -> MioSettingsIndex {}
                             }
                         }
-                        if (pane == MioDestination.LIBRARY) MioMiniPlayer(playing, {}, {}, {}) { FixtureCover(0, it) }
+                        if (pane == MioDestination.LIBRARY) MioMiniPlayer(playing.copy(positionMs = 122500), {}, {}, {}) {
+                            ReferenceCover("album-0", it)
+                        }
                         if (pane != MioDestination.PLAYER) MioNavigation(pane) { pane = it }
                     }
                 }
@@ -159,10 +170,14 @@ class MioScreensTest {
         assertTrue(toggled)
         compose.onNodeWithContentDescription("Cassette. Vuốt ngang để tua bài hát")
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(.5f) }
-        assertEquals(122500L, seekPosition)
-        compose.runOnIdle { mode = "light" }
+        assertEquals(148000L, seekPosition)
+        compose.runOnIdle { compact = true }
         savePreview("retro-cassette-compact", view)
-        compose.runOnIdle { mode = "dark"; extra = "queue" }
+        compose.runOnIdle { extra = ""; pane = MioDestination.PLAYER }
+        savePreview("now-playing-compact", view)
+        compose.runOnIdle { pane = MioDestination.LIBRARY }
+        savePreview("library-compact", view)
+        compose.runOnIdle { compact = false; extra = "queue" }
         compose.onNodeWithContentDescription("Bài hiện tại").assertIsDisplayed()
         savePreview("queue-dark", view)
         compose.onNodeWithText("Evergreen").performClick()
@@ -173,6 +188,16 @@ class MioScreensTest {
         compose.onNodeWithContentDescription("Xử lý DSP (tắt Source Direct)").assertIsOn()
         savePreview("equalizer-dark", view)
         compose.onNodeWithContentDescription("Xử lý DSP (tắt Source Direct)").performClick().assertIsOff()
+    }
+
+    @Composable
+    private fun ReferenceCover(name: String, modifier: Modifier) {
+        val image = remember(name) {
+            requireNotNull(javaClass.getResourceAsStream("/mio-polish/$name.jpg")).use {
+                BitmapFactory.decodeStream(it).asImageBitmap()
+            }
+        }
+        Image(image, null, modifier.clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
     }
 
     @Composable
@@ -301,8 +326,28 @@ class MioScreensTest {
         return (maxOf(a, b) + .05) / (minOf(a, b) + .05)
     }
 
+    private val geometryTags = mapOf(
+        "now-playing-dark" to listOf("mio-cover", "mio-track-metadata", "mio-transport", "mio-format"),
+        "library-dark" to listOf("mio-album-cover", "mio-mini-player", "mio-navigation"),
+        "retro-cassette" to listOf("mio-case", "mio-window", "mio-key-row"),
+    )
+
     private fun savePreview(name: String, view: View) {
         val output = File("build/reports/mio-previews").apply { mkdirs() }
+        geometryTags[name]?.let { tags ->
+            val root = compose.onNodeWithTag("mio-preview").fetchSemanticsNode().boundsInRoot
+            val geometry = org.json.JSONObject()
+            tags.forEach { tag ->
+                val boxes = org.json.JSONArray()
+                compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().forEach { node ->
+                    val b = node.boundsInRoot
+                    boxes.put(org.json.JSONArray(listOf(b.left - root.left, b.top - root.top,
+                        b.right - root.left, b.bottom - root.top)))
+                }
+                geometry.put(tag, boxes)
+            }
+            File(output, "$name-geometry.json").writeText(geometry.toString(2))
+        }
         val image = HostViewCapture.capture(compose, "mio-preview", view)
         File(output, "$name.png").outputStream().use { assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, it)) }
         image.recycle()

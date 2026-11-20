@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.walkmanstudio.nativeplayer
 
+import androidx.compose.ui.platform.testTag
 import androidx.annotation.DrawableRes
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.Canvas
@@ -18,6 +19,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
@@ -48,8 +52,8 @@ private data class CassetteSprite(@param:DrawableRes val image: Int, val bounds:
 
 private val housing = CassetteSprite(R.drawable.mio_cassette_housing_clean_plate, CassetteRect(0, 0, 941, 1672))
 private val tapeBed = CassetteSprite(R.drawable.mio_cassette_tape_window_background, CassetteRect(82, 484, 779, 253))
-private val leftReel = CassetteSprite(R.drawable.mio_cassette_reel_left, CassetteRect(146, 499, 222, 222))
-private val rightReel = CassetteSprite(R.drawable.mio_cassette_reel_right, CassetteRect(565, 499, 222, 222))
+private val leftReel = CassetteSprite(R.drawable.mio_cassette_reel_left, CassetteRect(140, 493, 234, 234))
+private val rightReel = CassetteSprite(R.drawable.mio_cassette_reel_right, CassetteRect(559, 493, 234, 234))
 private val label = CassetteSprite(R.drawable.mio_cassette_label_blank, CassetteRect(75, 371, 781, 111))
 private val frame = CassetteSprite(R.drawable.mio_cassette_window_frame, CassetteRect(52, 323, 843, 553))
 private val previousKey = CassetteSprite(R.drawable.mio_cassette_key_previous, CassetteRect(78, 1229, 181, 165))
@@ -72,26 +76,34 @@ internal fun MioCassetteSprites(
     val colors = MaterialTheme.colorScheme
     val labelInk = Color(0xFF35271B)
     val title = state.title.ifBlank { "Chưa chọn bài" }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val unit = maxWidth / 941
+    BoxWithConstraints(Modifier.fillMaxSize().mioGraphite().clipToBounds()) {
+        // Only the black overscan outside the metal case is cropped.
+        val canvasWidth = maxWidth * 1.018f
+        val unit = canvasWidth / 941
         val canvasHeight = unit * 1672
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Box(Modifier.fillMaxWidth().height(canvasHeight)) {
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(0.dp, BiasAlignment.Vertical(-.16f))) {
+            Box(Modifier.requiredWidth(canvasWidth).height(canvasHeight)) {
                 Sprite(housing, housing.bounds.place(unit))
+                Spacer(CassetteRect(20, 154, 900, 1449).place(unit).testTag("mio-case"))
                 // The forged tape texture stays still while both exposed hubs turn.
                 Sprite(tapeBed, tapeBed.bounds.place(unit))
-                Canvas(tapeBed.bounds.place(unit)) {
-                    for (x in listOf(.215f, .763f)) {
-                        val center = Offset(size.width * x, size.height * .49f)
-                        val radius = size.height * .63f
-                        drawCircle(Brush.radialGradient(listOf(Color(0xFF6D4832), Color(0xFF35241D), Color.Transparent),
-                            center, radius), radius, center)
-                        repeat(10) { winding ->
-                            drawCircle(Color(0xFFAA785B).copy(alpha = .12f), radius * (.55f + winding * .043f), center,
-                                style = Stroke(.55.dp.toPx()))
+                Canvas(tapeBed.bounds.place(unit).clipToBounds()) {
+                    drawRect(Brush.verticalGradient(listOf(Color(0xE60A0909), Color(0xA6160D0B), Color(0xDF090909))))
+                    for ((index, x) in listOf(.225f, .763f).withIndex()) {
+                        val center = Offset(size.width * x, size.height * .50f)
+                        val radius = size.height * if (index == 0) .73f else .76f
+                        drawCircle(Brush.radialGradient(0f to Color(0xFF12100E),
+                            .65f to Color(0xFF4F2717), .90f to Color(0xFF2B1B15), 1f to Color.Transparent,
+                            center = center, radius = radius), radius, center)
+                        repeat(14) { winding ->
+                            drawCircle(Color(0xFFAD7850).copy(alpha = if (winding % 3 == 0) .24f else .10f),
+                                radius * (.55f + winding * .030f), center, style = Stroke(.48.dp.toPx()))
                         }
                     }
+                    drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .34f), Color.Transparent,
+                        Color.Transparent, Color.Black.copy(alpha = .38f))))
                 }
                 Sprite(leftReel, leftReel.bounds.place(unit).graphicsLayer {
                     transformOrigin = TransformOrigin(.5f, .5f)
@@ -103,12 +115,12 @@ internal fun MioCassetteSprites(
                 })
                 Canvas(CassetteRect(89, 484, 768, 260).place(unit)) {
                     val rim = CornerRadius(5.dp.toPx())
-                    drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = .16f), Color.Transparent,
-                        Color.White.copy(alpha = .07f)), endY = size.height), cornerRadius = rim)
+                    drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = .10f), Color.Transparent,
+                        Color.White.copy(alpha = .035f)), endY = size.height), cornerRadius = rim)
                     drawRoundRect(Color.White.copy(alpha = .19f), cornerRadius = rim, style = Stroke(.65.dp.toPx()))
                 }
                 Sprite(label, label.bounds.place(unit).clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
-                Sprite(frame, frame.bounds.place(unit))
+                Sprite(frame, frame.bounds.place(unit).testTag("mio-window"))
                 Box(CassetteRect(76, 374, 779, 105).place(unit)
                     .background(Brush.horizontalGradient(listOf(Color(0x18F5E9CF), Color(0x58FFF8E1), Color(0x00FFF8E1))))) {
                     Canvas(Modifier.fillMaxHeight().width(unit * 86)) {
@@ -128,10 +140,10 @@ internal fun MioCassetteSprites(
                     Row(Modifier.fillMaxSize().padding(start = unit * 108, end = unit * 32),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         BasicText(title, Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleLarge.copy(color = labelInk, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic),
+                            style = MaterialTheme.typography.titleLarge.copy(color = labelInk, fontFamily = FontFamily.Cursive, fontStyle = FontStyle.Normal, fontWeight = FontWeight.Normal),
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            autoSize = TextAutoSize.StepBased(10.sp, 24.sp, 1.sp))
-                        Text("C-60", style = MaterialTheme.typography.titleSmall, color = labelInk, maxLines = 1)
+                            autoSize = TextAutoSize.StepBased(11.sp, 28.sp, 1.sp))
+                        Text("C-60", style = MaterialTheme.typography.titleMedium, color = labelInk, maxLines = 1)
                     }
                 }
                 Box(CassetteRect(82, 487, 779, 268).place(unit).then(tapeSeek))
@@ -161,12 +173,13 @@ internal fun MioCassetteSprites(
                         val bars = 26
                         val step = size.width / bars
                         repeat(bars) { index ->
-                            val height = size.height * (.16f + .84f * index / (bars - 1))
+                            val height = size.height * (.21f + .63f * index / (bars - 1) + .09f * kotlin.math.sin(index * .8f))
                             drawRect(colors.primary.copy(alpha = if ((index + 1f) / bars <= progress) .95f else .18f),
                                 Offset(index * step, size.height - height), Size(step * .52f, height))
                         }
                     }
                 }
+                Spacer(CassetteRect(64, 1229, 800, 165).place(unit).testTag("mio-key-row"))
                 Box(Modifier.offset(unit * 110, unit * 1042).width(unit * 724)) { seek() }
 
                 Row(Modifier.offset(unit * 78, unit * 1440).width(unit * 785), horizontalArrangement = Arrangement.SpaceBetween) {

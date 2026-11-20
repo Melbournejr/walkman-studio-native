@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.walkmanstudio.nativeplayer
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Path
@@ -23,7 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -46,30 +47,30 @@ internal fun MioNowPlaying(
             else minOf(maxWidth * .84f, maxHeight * .56f, 440.dp).coerceAtLeast(96.dp)
         val controls: @Composable () -> Unit = {
             val panelHeight = if (wide || state.id == null) 0.dp
-                else (portraitHeight - coverWidth - 44.dp).coerceAtMost(300.dp).coerceAtLeast(0.dp)
+                else (portraitHeight - coverWidth - 44.dp).coerceAtMost(280.dp).coerceAtLeast(0.dp)
             Column(Modifier.width(coverWidth).heightIn(min = panelHeight),
-                verticalArrangement = if (panelHeight >= 300.dp) Arrangement.SpaceBetween else Arrangement.spacedBy(10.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                verticalArrangement = if (panelHeight >= 280.dp) Arrangement.SpaceBetween else Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.testTag("mio-track-metadata"), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(state.title.ifBlank { "Chưa chọn bài" },
-                        style = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Serif, fontSize = 28.sp),
+                        style = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Serif, fontSize = 27.sp, lineHeight = 30.sp, fontWeight = FontWeight.Medium),
                         maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (state.artist.isNotBlank()) Text(state.artist,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Serif),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 20.sp),
                         color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (state.album.isNotBlank()) Text(state.album,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, lineHeight = 17.sp),
                         color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (state.id != null) {
                     MioSeekBar(state, actions.seek)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    Row(Modifier.fillMaxWidth().testTag("mio-transport"), horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically) {
                         IconToggleButton(state.shuffled, { actions.shuffle() },
                             colors = IconButtonDefaults.iconToggleButtonColors(checkedContentColor = colors.primary)) {
                             StudioIcon(R.drawable.ic_shuffle, "Phát ngẫu nhiên", Modifier.size(20.dp))
                         }
                         IconButton(onClick = actions.previous) { StudioIcon(R.drawable.ic_previous, "Bài trước", Modifier.size(22.dp)) }
-                        OutlinedIconButton(onClick = actions.toggle, modifier = Modifier.size(68.dp),
+                        OutlinedIconButton(onClick = actions.toggle, modifier = Modifier.size(64.dp),
                             border = BorderStroke(1.5.dp, colors.primary)) {
                             StudioIcon(if (state.requested) R.drawable.ic_pause else R.drawable.ic_play,
                                 if (state.requested) "Tạm dừng" else "Phát", Modifier.size(27.dp))
@@ -88,12 +89,12 @@ internal fun MioNowPlaying(
                         TextButton(onClick = actions.details) { Text("Chi tiết") }
                     }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().testTag("mio-format"), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     if (specs.isNotEmpty()) {
                         Surface(color = colors.surfaceContainerLow, shape = RoundedCornerShape(20.dp),
                             border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = .5f))) {
                             Text(specs.take(3).joinToString("  |  "), Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelMedium)
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Normal))
                         }
                     }
                     Spacer(Modifier.width(12.dp))
@@ -113,12 +114,10 @@ internal fun MioNowPlaying(
                 controls()
             }
         } else {
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-                colors.background, colors.background, colors.primary.copy(alpha = .035f).compositeOver(colors.background))))
-                .verticalScroll(rememberScrollState()).heightIn(min = portraitHeight).padding(top = 28.dp, bottom = 16.dp),
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = portraitHeight).padding(top = 28.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 val frame = RoundedCornerShape(16.dp)
-                Box(Modifier.size(coverWidth).clip(frame).border(1.dp, colors.primary.copy(alpha = .45f), frame)) {
+                Box(Modifier.size(coverWidth).testTag("mio-cover").clip(frame).border(1.dp, colors.primary.copy(alpha = .45f), frame)) {
                     artwork(Modifier.matchParentSize())
                     if (highResolutionSource) Surface(
                         Modifier.align(Alignment.TopStart).padding(14.dp), color = colors.background,
@@ -129,7 +128,7 @@ internal fun MioNowPlaying(
                     }
                 }
                 controls()
-                if (state.id != null) MioWaveFooter(Modifier.fillMaxWidth().height(76.dp).offset(y = (-20).dp))
+                if (state.id != null) MioWaveFooter(Modifier.fillMaxWidth().height(84.dp).offset(y = (-14).dp))
             }
         }
     }
@@ -138,19 +137,23 @@ internal fun MioNowPlaying(
 @Composable
 private fun MioWaveFooter(modifier: Modifier) {
     val accent = MaterialTheme.colorScheme.primary
-    Canvas(modifier) {
-        repeat(13) { line ->
-            val path = Path()
-            for (step in 0..64) {
-                val t = step / 64f
-                val y = size.height * (.77f - .43f * t +
-                    .24f * sin(t * 9f - line * .14f) + .012f * line)
-                if (step == 0) path.moveTo(0f, y) else path.lineTo(t * size.width, y)
+    Spacer(modifier.drawWithCache {
+        val strands = List(15) { line ->
+            Path().apply {
+                for (step in 0..64) {
+                    val t = step / 64f
+                    val y = size.height * (.74f - .43f * t +
+                        .21f * sin(t * 9.4f + line * .085f) + .017f * line)
+                    if (step == 0) moveTo(0f, y) else lineTo(t * size.width, y)
+                }
             }
-            drawPath(path, Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .23f),
-                accent.copy(alpha = .11f), Color.Transparent), endX = size.width), style = Stroke(.6.dp.toPx()))
         }
-    }
+        val ink = Brush.horizontalGradient(0f to Color.Transparent,
+            .30f to accent.copy(alpha = .10f), .66f to accent.copy(alpha = .21f),
+            .91f to accent.copy(alpha = .085f), 1f to Color.Transparent)
+        val stroke = Stroke(.45.dp.toPx())
+        onDrawBehind { strands.forEach { drawPath(it, ink, style = stroke) } }
+    })
 }
 
 @Composable
