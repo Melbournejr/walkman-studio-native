@@ -25,20 +25,33 @@ jobs:
         run: |
           export JAVA_HOME="$JAVA_HOME_21_X64"
           export PATH="$JAVA_HOME/bin:$PATH"
+          python3 -m unittest discover -s qa -p test_production_policy.py
           python3 qa/production_policy.py certificateSha256
           sdkmanager --channel=3 'platforms;android-36' 'build-tools;35.0.0' 'ndk;30.0.16248370' 'cmake;3.22.1'
           ./gradlew --console=plain --max-workers=2 \
             :core:test :playback:hostNative :library:testDebugUnitTest \
             :playback:testDebugUnitTest :app:testDebugUnitTest :app:assembleRelease \
             :app:lintRelease :library:lintRelease :playback:lintRelease
+      - name: Save release inputs and build the first-release OTA probe
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          inputs="$RUNNER_TEMP/production-signing-input"
+          mkdir -p "$inputs"
+          cp app/build/outputs/apk/release/app-release-unsigned.apk "$inputs/release.apk"
+          cp app/build/outputs/mapping/release/mapping.txt "$inputs/mapping.txt"
+          if [[ "$(python3 qa/production_policy.py tag)" == stage12 ]]; then
+            trap 'git restore -- release/production.properties' EXIT
+            sed -i 's/^versionCode=108$/versionCode=109/; s/^versionName=.*/versionName=1.4.0-audio-engine-ota-probe/' release/production.properties
+            ./gradlew --console=plain --max-workers=2 :app:assembleRelease
+            cp app/build/outputs/apk/release/app-release-unsigned.apk "$inputs/ota-probe.apk"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: stage12-signing-input
+          name: production-signing-input
           if-no-files-found: error
           retention-days: 3
-          path: |
-            app/build/outputs/apk/release/app-release-unsigned.apk
-            app/build/outputs/mapping/release/mapping.txt
+          path: ${{ runner.temp }}/production-signing-input/
 
   sign:
     needs: build
@@ -50,8 +63,8 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: stage12-signing-input
-          path: app/build/outputs
+          name: production-signing-input
+          path: ${{ runner.temp }}/production-signing-input
       - name: Install APK verification tools
         run: sdkmanager --channel=3 'build-tools;35.0.0' 'ndk;30.0.16248370'
       - name: Sign using the reviewed production key
@@ -85,21 +98,42 @@ jobs:
             exit 1
           fi
           tools="$ANDROID_HOME/build-tools/35.0.0"
-          unsigned=app/build/outputs/apk/release/app-release-unsigned.apk
-          "$tools/zipalign" -c -P 16 4 "$unsigned"
-          "$tools/apksigner" sign --ks "$keystore" \
-            --ks-key-alias "$WALKMAN_SIGNING_KEY_ALIAS" \
-            --ks-pass env:WALKMAN_SIGNING_STORE_PASSWORD \
-            --key-pass env:WALKMAN_SIGNING_KEY_PASSWORD \
-            --out "$RUNNER_TEMP/stage12-signed.apk" "$unsigned"
+          inputs="$RUNNER_TEMP/production-signing-input"
+          sign_apk() {
+            "$tools/zipalign" -c -P 16 4 "$1"
+            "$tools/apksigner" sign --ks "$keystore" \
+              --ks-key-alias "$WALKMAN_SIGNING_KEY_ALIAS" \
+              --ks-pass env:WALKMAN_SIGNING_STORE_PASSWORD \
+              --key-pass env:WALKMAN_SIGNING_KEY_PASSWORD \
+              --out "$2" "$1"
+          }
+          sign_apk "$inputs/release.apk" "$RUNNER_TEMP/stage12-signed.apk"
+          if [[ "$(python3 qa/production_policy.py tag)" == stage12 ]]; then
+            mkdir "$RUNNER_TEMP/production-ota-probe"
+            sign_apk "$inputs/ota-probe.apk" "$RUNNER_TEMP/production-ota-probe/ota-probe.apk"
+          fi
       - name: Verify continuity and prepare the reviewed distribution
         run: |
           export JAVA_HOME="$JAVA_HOME_21_X64"
           export PATH="$JAVA_HOME/bin:$PATH"
+          mkdir -p app/build/outputs/mapping/release
+          cp "$RUNNER_TEMP/production-signing-input/mapping.txt" app/build/outputs/mapping/release/mapping.txt
           python3 qa/prepare-audio-engine-ota.py "$RUNNER_TEMP/stage12-signed.apk" "$RUNNER_TEMP/stage12-staged"
+      - name: Validate the first-release OTA probe pair
+        run: |
+          if [[ "$(python3 qa/production_policy.py tag)" == stage12 ]]; then
+            python3 qa/verify-production-ota-probe.py "$ANDROID_HOME/build-tools/35.0.0" \
+              "$RUNNER_TEMP/stage12-signed.apk" "$RUNNER_TEMP/production-ota-probe/ota-probe.apk"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: stage12-verified-distribution
           path: ${{ runner.temp }}/stage12-staged/
           if-no-files-found: error
           retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-ota-probe-test-only
+          path: ${{ runner.temp }}/production-ota-probe/
+          if-no-files-found: ignore
+          retention-days: 3
