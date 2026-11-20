@@ -1,0 +1,371 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "1be628c0acd2710831c453b684e76b8e",
+    "entities": [
+      {
+        "tableName": "roots",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `uri` TEXT NOT NULL, `displayName` TEXT NOT NULL, `addedAt` INTEGER NOT NULL, `lastScanAt` INTEGER, `permissionLost` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uri",
+            "columnName": "uri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "addedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastScanAt",
+            "columnName": "lastScanAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "permissionLost",
+            "columnName": "permissionLost",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "tracks",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `rootId` TEXT NOT NULL, `documentId` TEXT NOT NULL, `uri` TEXT NOT NULL, `parentId` TEXT, `name` TEXT NOT NULL, `relativePath` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `size` INTEGER, `lastModified` INTEGER, `naturalSortKey` TEXT NOT NULL, `generation` INTEGER NOT NULL, `title` TEXT, `artist` TEXT, `album` TEXT, `albumArtist` TEXT, `discNumber` INTEGER, `trackNumber` INTEGER, `durationMs` INTEGER, `coverKey` TEXT, `trackGain` REAL, `albumGain` REAL, `trackPeak` REAL, `albumPeak` REAL, `metadataVersion` INTEGER NOT NULL DEFAULT 0, `metadataError` TEXT, `discSort` INTEGER NOT NULL DEFAULT 1, `trackSort` INTEGER NOT NULL DEFAULT 2147483647, FOREIGN KEY(`rootId`) REFERENCES `roots`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rootId",
+            "columnName": "rootId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "documentId",
+            "columnName": "documentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uri",
+            "columnName": "uri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentId",
+            "columnName": "parentId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relativePath",
+            "columnName": "relativePath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mimeType",
+            "columnName": "mimeType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "size",
+            "columnName": "size",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastModified",
+            "columnName": "lastModified",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "naturalSortKey",
+            "columnName": "naturalSortKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generation",
+            "columnName": "generation",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artist",
+            "columnName": "artist",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "album",
+            "columnName": "album",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "albumArtist",
+            "columnName": "albumArtist",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "discNumber",
+            "columnName": "discNumber",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "trackNumber",
+            "columnName": "trackNumber",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "durationMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "coverKey",
+            "columnName": "coverKey",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "trackGain",
+            "columnName": "trackGain",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "albumGain",
+            "columnName": "albumGain",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "trackPeak",
+            "columnName": "trackPeak",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "albumPeak",
+            "columnName": "albumPeak",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "metadataVersion",
+            "columnName": "metadataVersion",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "metadataError",
+            "columnName": "metadataError",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "discSort",
+            "columnName": "discSort",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "trackSort",
+            "columnName": "trackSort",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "2147483647"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_tracks_rootId_documentId",
+            "unique": true,
+            "columnNames": [
+              "rootId",
+              "documentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_tracks_rootId_documentId` ON `${TABLE_NAME}` (`rootId`, `documentId`)"
+          },
+          {
+            "name": "index_tracks_rootId_discSort_trackSort_naturalSortKey_name_documentId",
+            "unique": false,
+            "columnNames": [
+              "rootId",
+              "discSort",
+              "trackSort",
+              "naturalSortKey",
+              "name",
+              "documentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tracks_rootId_discSort_trackSort_naturalSortKey_name_documentId` ON `${TABLE_NAME}` (`rootId`, `discSort`, `trackSort`, `naturalSortKey`, `name`, `documentId`)"
+          },
+          {
+            "name": "index_tracks_discSort_trackSort_naturalSortKey_name_documentId",
+            "unique": false,
+            "columnNames": [
+              "discSort",
+              "trackSort",
+              "naturalSortKey",
+              "name",
+              "documentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tracks_discSort_trackSort_naturalSortKey_name_documentId` ON `${TABLE_NAME}` (`discSort`, `trackSort`, `naturalSortKey`, `name`, `documentId`)"
+          },
+          {
+            "name": "index_tracks_rootId_generation",
+            "unique": false,
+            "columnNames": [
+              "rootId",
+              "generation"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tracks_rootId_generation` ON `${TABLE_NAME}` (`rootId`, `generation`)"
+          },
+          {
+            "name": "index_tracks_rootId_metadataVersion_id",
+            "unique": false,
+            "columnNames": [
+              "rootId",
+              "metadataVersion",
+              "id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tracks_rootId_metadataVersion_id` ON `${TABLE_NAME}` (`rootId`, `metadataVersion`, `id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "roots",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "rootId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "scan_states",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rootId` TEXT NOT NULL, `generation` INTEGER NOT NULL, `state` TEXT NOT NULL, `workId` TEXT, `visited` INTEGER NOT NULL, `audioFiles` INTEGER NOT NULL, `changed` INTEGER NOT NULL, `message` TEXT, PRIMARY KEY(`rootId`), FOREIGN KEY(`rootId`) REFERENCES `roots`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "rootId",
+            "columnName": "rootId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generation",
+            "columnName": "generation",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workId",
+            "columnName": "workId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "visited",
+            "columnName": "visited",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "audioFiles",
+            "columnName": "audioFiles",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "changed",
+            "columnName": "changed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "message",
+            "columnName": "message",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "rootId"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "roots",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "rootId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1be628c0acd2710831c453b684e76b8e')"
+    ]
+  }
+}

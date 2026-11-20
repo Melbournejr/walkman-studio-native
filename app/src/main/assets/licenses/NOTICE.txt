@@ -1,0 +1,16 @@
+Walkman Studio Native
+Project source: GPL-3.0-or-later.
+Copyright (C) 2026 Walkman Studio Native contributors.
+
+AndroidX, Kotlin, kotlinx.coroutines, Koin and their Apache-licensed components retain their original licenses.
+See the full corresponding source package, version catalog and dependency report supplied with this APK.
+Gradle wrapper is licensed under Apache-2.0 and is supplied only in the source package.
+No FFmpeg, WebView, WASM or DSD decoder is embedded in stage 1.
+
+Material icon path data: Google Material Design icons, Apache-2.0.
+
+DSD C++ FIR and Kotlin container/window layout adapt Walkman Studio v1.1.1
+dsd-format.js, commit6e4c13fcba29d3a4eb3ccd67a86e1c8aedd2bb8a.
+Copyright (C) 2026 Walkman Studio contributors; GPL-3.0-or-later.
+Original snapshot and attribution are in third_party/legacy-dsd in the source.
+NDK LLVM/libc++: Apache-2.0 with LLVM exception / MIT (see Android NDK notices).
