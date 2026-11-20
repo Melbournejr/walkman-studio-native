@@ -88,7 +88,7 @@ class DspAudioProcessor(private val state: DspState, private val quantizer: Tpdf
             }
             val processed = dsp.process(sample, channel)
             if (floatOutput) output.putFloat(processed.toFloat())
-            else output.putShort(quantizer.quantize(processed, config.dither))
+            else output.putShort(quantizer.quantize(processed, config.dither && dsp.needsDither))
             channel++
             if (channel == inputAudioFormat.channelCount) channel = 0
         }

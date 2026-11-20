@@ -30,8 +30,8 @@ class DspProcessorTest {
         assertArrayEquals(samples,run(processor,samples))
     }
     @Test fun flatPcm16IsExactAndBufferPartitionDoesNotMixChannels() {
-        // This test verifies the unchanged DSP math/quantization with noise explicitly disabled.
-        val state=DspState(DspConfig(false,preventClipping=false,dither=false));val flat=DspAudioProcessor(state)
+        // An identity DSP chain has no precision to discard, even if dither is enabled.
+        val state=DspState(DspConfig(false,preventClipping=false,dither=true));val flat=DspAudioProcessor(state)
         flat.configure(AudioProcessor.AudioFormat(48000,2,C.ENCODING_PCM_16BIT));flat.flush(AudioProcessor.StreamMetadata.DEFAULT)
         val samples=ShortArray(2000){((it*577)%60000-30000).toShort()}
         assertArrayEquals(samples,run(flat,samples))
@@ -128,7 +128,7 @@ class DspProcessorTest {
         assertArrayEquals(one,parts.toShortArray())
     }
     @Test fun togglingDitherChangesOnlyDspQuantizationAndSourceDirectRemainsBitExact() {
-        val state=DspState(DspConfig(false,preventClipping=false,dither=false))
+        val state=DspState(DspConfig(false,preamp=-3.0,preventClipping=false,dither=false))
         val processor=DspAudioProcessor(state,TpdfQuantizer(Random(8122)))
         processor.configure(AudioProcessor.AudioFormat(48000,2,C.ENCODING_PCM_16BIT));processor.flush(AudioProcessor.StreamMetadata.DEFAULT)
         val silence=ShortArray(10000)

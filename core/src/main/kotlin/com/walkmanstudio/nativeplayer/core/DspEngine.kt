@@ -22,36 +22,49 @@ data class DspConfig(val sourceDirect: Boolean = true, val bands: List<Double> =
 class DspEngine(private val sampleRate: Int, private val channels: Int, config: DspConfig, tags: ReplayGainInfo = ReplayGainInfo()) {
     init { require(sampleRate in 8000..768000 && channels in 1..32) }
     private class FilterBank(channels: Int) {
-        val coefficients = DoubleArray(55)
+        private val coefficients = DoubleArray(55)
         private val state1 = Array(channels) { DoubleArray(11) }
         private val state2 = Array(channels) { DoubleArray(11) }
-        private val active = BooleanArray(11)
+        private var sectionCount = 0
         private var gain = 1.0
 
+        val changesSamples: Boolean get() = sectionCount > 0 || gain != 1.0
+
         fun configure(target: DoubleArray, newGain: Double) {
-            target.copyInto(coefficients)
             gain = newGain
-            for (i in active.indices) {
-                active[i] = coefficients[i * 5] != 1.0 || coefficients[i * 5 + 1] != 0.0
+            sectionCount = 0
+            for (i in 0..10) {
+                val offset = i * 5
+                if (target[offset] == 1.0 && target[offset + 1] == 0.0) continue
+                target.copyInto(coefficients, sectionCount * 5, offset, offset + 5)
+                sectionCount++
             }
             reset()
         }
 
         fun process(input: Double, channel: Int): Double {
+            var x = input * gain
+            if (sectionCount == 0) return x
             val first = state1[channel]
             val second = state2[channel]
-            var x = input * gain
-            for (i in active.indices) {
-                if (!active[i]) continue
+            for (i in 0 until sectionCount) {
                 val k = i * 5
                 val y = coefficients[k] * x + first[i]
-                val z1 = coefficients[k + 1] * x - coefficients[k + 3] * y + second[i]
-                val z2 = coefficients[k + 2] * x - coefficients[k + 4] * y
-                first[i] = if (abs(z1) < 1e-30) 0.0 else z1
-                second[i] = if (abs(z2) < 1e-30) 0.0 else z2
+                first[i] = coefficients[k + 1] * x - coefficients[k + 3] * y + second[i]
+                second[i] = coefficients[k + 2] * x - coefficients[k + 4] * y
                 x = y
             }
             return x
+        }
+
+        fun clearTinyState() {
+            if (sectionCount == 0) return
+            for (channel in state1.indices) {
+                for (i in 0 until sectionCount) {
+                    if (abs(state1[channel][i]) < 1e-30) state1[channel][i] = 0.0
+                    if (abs(state2[channel][i]) < 1e-30) state2[channel][i] = 0.0
+                }
+            }
         }
 
         fun reset() {
@@ -67,8 +80,12 @@ class DspEngine(private val sampleRate: Int, private val channels: Int, config: 
     private val transitionFrames = max(32, sampleRate / 100)
     private var transitionFrame = 0
     private var pending = false
+    private var stateCleanup = 0
     private var limiter = config.limiter
     private var bypass = config.sourceDirect
+    val needsDither: Boolean
+        get() = !bypass && (limiter || current.changesSamples ||
+            (transitionFrame > 0 && incoming.changesSamples))
     var appliedGainDb = 0.0; private set
     var clippedSamples = 0L; private set
     init { update(config,tags,initial = true) }
@@ -109,6 +126,13 @@ class DspEngine(private val sampleRate: Int, private val channels: Int, config: 
     fun process(input: Double, channel: Int): Double {
         if (bypass) return input
         if (channel == 0) {
+            // Flush near-zero state periodically, outside the inner biquad loop.
+            if (stateCleanup == 0) {
+                current.clearTinyState()
+                incoming.clearTinyState()
+                stateCleanup = 128
+            }
+            stateCleanup--
             if (transitionFrame == transitionFrames) {
                 val old = current
                 current = incoming
