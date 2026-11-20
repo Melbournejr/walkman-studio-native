@@ -1,0 +1,130 @@
+name: Sign the reviewed Stage 13 PR candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full SHA of the allowlisted PR #4 head
+        required: true
+        type: string
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: sign-native-production
+
+jobs:
+  verify-source:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'Melbournejr/walkman-studio-native'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - name: Check the main-reviewed source allowlist and live PR identity
+        id: source
+        env:
+          REQUESTED_SHA: ${{ inputs.source_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          approved_sha=2e50cf6fae7b844b02be24c72c3f3f3cebe24c5b
+          [[ "$REQUESTED_SHA" == "$approved_sha" ]]
+          gh api "repos/$GITHUB_REPOSITORY/pulls/4" |
+            jq -e --arg repository "$GITHUB_REPOSITORY" --arg sha "$approved_sha" '
+              .state == "open" and .draft == false and .head.sha == $sha and
+              .head.repo.full_name == $repository and .head.ref == "feature/mio-player" and
+              .base.repo.full_name == $repository and .base.ref == "main"
+            ' >/dev/null
+          printf 'sha=%s\n' "$approved_sha" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: verify-source
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - name: Provision Android using the main workflow revision
+        run: bash trusted/.github/scripts/setup-android-sdk.sh build
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.verify-source.outputs.source_sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Test and build the pinned candidate without signing credentials
+        working-directory: candidate
+        env:
+          SOURCE_SHA: ${{ needs.verify-source.outputs.source_sha }}
+        run: |
+          [[ "$(git rev-parse HEAD)" == "$SOURCE_SHA" ]]
+          python3 -m unittest discover -s qa -p test_production_policy.py
+          ./gradlew --console=plain --max-workers=2 \
+            :core:test :playback:hostNative :library:testDebugUnitTest \
+            :playback:testDebugUnitTest :app:testDebugUnitTest :app:assembleRelease \
+            :app:lintRelease :library:lintRelease :playback:lintRelease
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: stage13-pr4-unsigned
+          path: candidate/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 3
+
+  sign:
+    name: Sign the pinned test APK in production-signing
+    needs: [verify-source, build]
+    runs-on: ubuntu-latest
+    environment: production-signing
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: stage13-pr4-unsigned
+          path: ${{ runner.temp }}/stage13-input
+      - name: Provision signing tools from main
+        run: bash .github/scripts/setup-android-sdk.sh sign
+      - name: Recheck that approval covers the current PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ needs.verify-source.outputs.source_sha }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pulls/4" |
+            jq -e --arg repository "$GITHUB_REPOSITORY" --arg sha "$SOURCE_SHA" '
+              .state == "open" and .draft == false and .head.sha == $sha and
+              .head.repo.full_name == $repository and .head.ref == "feature/mio-player" and
+              .base.repo.full_name == $repository and .base.ref == "main"
+            ' >/dev/null
+      - name: Validate the unsigned APK before exposing the signing entry
+        run: |
+          bash .github/scripts/stage13-pr-candidate.sh verify
+      - name: Sign and verify the candidate with the existing production entry
+        env:
+          SOURCE_SHA: ${{ needs.verify-source.outputs.source_sha }}
+          BACKED_UP_CERTIFICATE: ${{ vars.WALKMAN_BACKED_UP_CERTIFICATE_SHA256 }}
+          WALKMAN_SIGNING_KEYSTORE_B64: ${{ secrets.WALKMAN_SIGNING_KEYSTORE_B64 }}
+          WALKMAN_SIGNING_STORE_PASSWORD: ${{ secrets.WALKMAN_SIGNING_STORE_PASSWORD }}
+          WALKMAN_SIGNING_KEY_ALIAS: ${{ secrets.WALKMAN_SIGNING_KEY_ALIAS }}
+          WALKMAN_SIGNING_KEY_PASSWORD: ${{ secrets.WALKMAN_SIGNING_KEY_PASSWORD }}
+        run: |
+          bash .github/scripts/stage13-pr-candidate.sh sign
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: stage13-pr4-signed-upgrade-test-only
+          path: ${{ runner.temp }}/stage13-signed/
+          if-no-files-found: error
+          retention-days: 7
