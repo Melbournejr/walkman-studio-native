@@ -40,6 +40,43 @@ double test_reference(int ratio,bool lsb){
  fir.decode(bytes.data()+113*fir.step(),stride,2,frames-113,split.data()+113*2);
  expect(result==split,"Block/seek FIR windows differ");return maximum;
 }
+void test_silence_scaling_and_response(int ratio) {
+ DsdFir fir(ratio,true);
+ const int stride=fir.groups();
+ std::vector<uint8_t> bytes(stride*2,0x55);
+ float output[2]{};
+ fir.decode(bytes.data(),stride,2,1,output);
+ expect(std::abs(output[0])<1e-6 && output[0]==output[1],"Alternating DSD is not silent");
+ std::fill(bytes.begin(),bytes.begin()+stride,0xff);
+ fir.decode(bytes.data(),stride,2,1,output);
+ expect(std::abs(output[0]-1)<1e-6 && std::abs(output[1])<1e-6,"Full scale or channel isolation failed");
+
+ // Recover the production impulse response by flipping each bit in an alternating window.
+ std::fill(bytes.begin(),bytes.end(),0x55);
+ float zero{};
+ fir.decode(bytes.data(),stride,1,1,&zero);
+ std::vector<double> coefficients(stride*8);
+ for(int tap=0;tap<stride*8;tap++){
+  const uint8_t mask=1<<(tap%8);
+  const double direction=(bytes[tap/8]&mask)?-2:2;
+  bytes[tap/8]^=mask;
+  fir.decode(bytes.data(),stride,1,1,output);
+  bytes[tap/8]^=mask;
+  coefficients[tap]=(output[0]-zero)/direction;
+ }
+ for(int hz=0;hz<=100000;hz+=250){
+  if(hz>20000 && hz<44100)continue;
+  double real=0,imaginary=0;
+  for(size_t tap=0;tap<coefficients.size();tap++){
+   const double phase=2*pi*hz*tap/(88200*ratio);
+   real+=coefficients[tap]*std::cos(phase);
+   imaginary+=coefficients[tap]*std::sin(phase);
+  }
+  const double magnitude=std::hypot(real,imaginary);
+  if(hz<=20000)expect(std::abs(20*std::log10(magnitude))<.015,"Passband ripple exceeds 0.015 dB");
+  else expect(magnitude<.00032,"Stopband attenuation below 70 dB");
+ }
+}
 struct Result{int rate;double amplitude_error,frequency_error,rtf,milliseconds,max_reference;};
 Result benchmark(int ratio){
  const int rate=88200*ratio,frames=88200*2,half=ratio*2,groups=ratio*4,step=ratio/8;
@@ -73,7 +110,7 @@ Result benchmark(int ratio){
 int main(int argc,char** argv){
  try{
   expect(argc==2,"Need JSON output path");std::vector<Result> results;
-  for(int ratio:{32,64,128})results.push_back(benchmark(ratio));
+  for(int ratio:{32,64,128}){results.push_back(benchmark(ratio));test_silence_scaling_and_response(ratio);}
   bool rejected=false;try{DsdFir invalid(256,true);}catch(const std::invalid_argument&){rejected=true;}expect(rejected,"DSD512 was accepted");
   std::ofstream out(argv[1]);out<<std::setprecision(12)<<"{\n  \"environment\":\"HOST SIMULATION x86_64 Linux; not Snapdragon8Gen3\",\n  \"backend\":\"same production C++ FIR, g++ -O3, one CPU thread\",\n  \"source\":\"synthetic first-order sigma-delta sine1000Hz -12dBFS,2seconds,stereo\",\n  \"ioIncluded\":false,\n  \"timingSamplesPerRate\":1,\n  \"limits\":{\"amplitudeDb\":0.1,\"frequencyHz\":0.1,\"maxAbsFloat64\":0.00001,\"deviceTargetRtf\":0.25},\n  \"results\":[\n";
   for(size_t i=0;i<results.size();i++){const auto& r=results[i];if(i)out<<",\n";out<<"    {\"dsdRate\":"<<r.rate<<",\"outputRate\":88200,\"amplitudeErrorDb\":"<<r.amplitude_error<<",\"frequencyErrorHz\":"<<r.frequency_error<<",\"maxAbsFloat64\":"<<r.max_reference<<",\"decodeMs\":"<<r.milliseconds<<",\"rtf\":"<<r.rtf<<"}";}

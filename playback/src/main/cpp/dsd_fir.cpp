@@ -39,9 +39,18 @@ void DsdFir::decode(const uint8_t* input,int stride,int channels,int frames,floa
  for(int channel=0;channel<channels;channel++){
   const uint8_t* plane=input+channel*stride;
   for(int frame=0;frame<frames;frame++){
-   const uint8_t* bytes=plane+frame*advance;double value=0;
-   for(int group=0;group<count;group++)value+=lut[group*256+bytes[group]];
-   output[frame*channels+channel]=static_cast<float>(value);
+   const uint8_t* bytes=plane+frame*advance;
+   // Each supported ratio has a group count divisible by four. Independent
+   // double accumulators shorten the dependency chain without changing the LUT.
+   double a=0,b=0,c=0,d=0;
+   for(int group=0;group<count;group+=4){
+    const float* row=lut+group*256;
+    a+=row[bytes[group]];
+    b+=row[256+bytes[group+1]];
+    c+=row[512+bytes[group+2]];
+    d+=row[768+bytes[group+3]];
+   }
+   output[frame*channels+channel]=static_cast<float>((a+b)+(c+d));
   }
  }
 }
