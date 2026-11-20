@@ -49,4 +49,4 @@ After the test, review and signing gates pass, stage the release from the review
 python3 qa/prepare-audio-engine-ota.py SIGNED_STAGE12.apk VERIFIED_STAGE11.apk STAGING_DIRECTORY
 ```
 
-The command validates application identity, package version, certificate continuity, ABI, native libraries and 16 KiB alignment. It writes the signed APK, corresponding source ZIP, `update.json` and `SHA256SUMS`. Publish those assets on the reviewed `stage12` tag together. The application discovers the manifest through the latest published GitHub Release and validates the manifest, download content and APK signing identity before installation.
+The command validates application identity, package version, certificate continuity, ABI, native libraries and 16 KiB alignment. It writes the signed APK, corresponding source ZIP, `update.json` `SHA256SUMS`, signature evidence and a checksummed `distribution/stage12` copy. Publish those assets on the reviewed `stage12` tag together. The application discovers the manifest through the latest published GitHub Release and validates the manifest, download content and APK signing identity before installation.

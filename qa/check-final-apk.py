@@ -3,6 +3,7 @@
 """Read-only verification of the one exported, review-signed release-config APK."""
 from pathlib import Path
 import argparse,hashlib,json,os,re,struct,subprocess,sys,tempfile,zipfile
+if not __debug__: sys.exit('APK validation requires Python assertions to be enabled')
 root=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser()
 parser.add_argument('apk',type=Path)
@@ -117,7 +118,7 @@ assert f'{cls} -> {cls}:' in mapping,'JNI class renamed'
 # Unchanged native methods are omitted from R8 mapping; DEX declarations and ELF exports are checked above.
 report={'apk':apk.name,'bytes':apk.stat().st_size,'sha256':hashlib.sha256(apk.read_bytes()).hexdigest(),
  'applicationId':'com.walkmanstudio.nativeplayer','versionName':version_name,'versionCode':version_code,'minSdk':26,'targetSdk':35,
- 'variant':'review (release/R8 config, debuggable=false)','signature':'existing build-environment install/test key; NOT user release key',
+ 'variant':'review (release/R8 config, debuggable=false)','signature':'verified against the Stage 11 signing certificate' if stage==12 else 'existing build-environment install/test key; NOT user release key',
  'certificateSha256':certificate,'previousCertificateSha256':previous_certificate,'updatesDeliveredStage7Signer':stage>=8,
  'apkV2Verified':True,'zip16KiBVerified':True,'elfLoadAlignments':loads,
  'forbiddenPermissionsAbsent':True,'nativeJniNamePreserved':True,'nativeMethodsVerified':sorted(jni_methods),

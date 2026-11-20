@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Prepare stage12 release assets after running the APK and source review gates."""
 import argparse
+import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -61,6 +63,43 @@ update = {
     "notes": "High-resolution PCM DSP, EQ transitions, and observed audio routing.",
 }
 (assets / "update.json").write_text(json.dumps(update, indent=2) + "\n")
+# Keep the existing chunked distribution convention available for GitHub handoff.
+distribution = args.output / "distribution" / TAG
+parts = distribution / "parts"
+parts.mkdir(parents=True)
+records = []
+for kind, path in (("apk", apk), ("source", source)):
+    data = path.read_bytes()
+    encoded = base64.b64encode(data)
+    chunks = []
+    for index, offset in enumerate(range(0, len(encoded), 48 * 1024)):
+        name = f"{kind}-{index:03d}.b64"
+        chunk = encoded[offset:offset + 48 * 1024]
+        (parts / name).write_bytes(chunk)
+        chunks.append({"name": name, "sha256": hashlib.sha256(chunk).hexdigest()})
+    records.append({
+        "name": path.name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+        "parts": chunks,
+    })
+sdk = Path(os.environ.get("ANDROID_SDK_ROOT") or os.environ["ANDROID_HOME"])
+signature = subprocess.check_output([
+    str(sdk / "build-tools/35.0.0/apksigner"), "verify", "--verbose",
+    "--print-certs-pem", str(apk),
+], text=True)
+pem = signature[signature.index("-----BEGIN CERTIFICATE-----"):].strip() + "\n"
+(assets / "SIGNATURE.txt").write_text(signature)
+(assets / "signing-certificate.pem").write_text(pem)
+ready = {
+    "versionCode": report["versionCode"],
+    "versionName": report["versionName"],
+    "nativeCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+    "certificateSha256": report["certificateSha256"],
+    "certificatePem": pem,
+    "signature": signature,
+    "update": update,
+    "files": records,
+}
+(distribution / "READY.json").write_text(json.dumps(ready, indent=2) + "\n")
 checksums = [
     f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}"
     for path in sorted(assets.iterdir())
