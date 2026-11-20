@@ -1,15 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+val releasePolicy = Properties().apply {
+    load(rootProject.file("release/production.properties").reader())
+}
+val productionCertificate = releasePolicy.getProperty("certificateSha256")
+require(productionCertificate.isEmpty() || productionCertificate.matches(Regex("[0-9a-f]{64}")))
+
 android {
     namespace = "com.walkmanstudio.nativeplayer"
     compileSdk = 36
     ndkVersion = "30.0.16248370"
     buildToolsVersion = "35.0.0"
-    defaultConfig { applicationId = "com.walkmanstudio.nativeplayer"; minSdk = 26; targetSdk = 35; ndk { abiFilters += listOf("arm64-v8a", "x86_64") }; versionCode = 108; versionName = "1.4.0-audio-engine" }
+    defaultConfig { applicationId = "com.walkmanstudio.nativeplayer"; minSdk = 26; targetSdk = 35; ndk { abiFilters += listOf("arm64-v8a", "x86_64") }; versionCode = releasePolicy.getProperty("versionCode").toInt(); versionName = releasePolicy.getProperty("versionName")
+        buildConfigField("String", "OTA_CERTIFICATE", "\"$productionCertificate\"")
+     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     testOptions { unitTests.isIncludeAndroidResources = true }

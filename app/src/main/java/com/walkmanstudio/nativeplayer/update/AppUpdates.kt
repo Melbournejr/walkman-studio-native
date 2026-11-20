@@ -49,10 +49,10 @@ data class UpdateSnapshot(
 ) { val ready: Boolean get() = candidate != null && readyVersion == candidate.versionCode }
 
 /** Small update state only. Music/library metadata never enters this store or the HTTP client. */
-class UpdateStore(context: Context) {
+class UpdateStore(context: Context, private val certificate: String = BuildConfig.OTA_CERTIFICATE) {
     private val prefs = context.getSharedPreferences("application-updates", Context.MODE_PRIVATE)
     fun read(): UpdateSnapshot = synchronized(lock) {
-        val candidate = prefs.getString("candidate", null)?.let { runCatching { GithubUpdateCatalog.decode(JSONObject(it)) }.getOrNull() }
+        val candidate = prefs.getString("candidate", null)?.let { runCatching { GithubUpdateCatalog.decode(JSONObject(it), certificate) }.getOrNull() }
         UpdateSnapshot(runCatching { UpdateStatus.valueOf(prefs.getString("status", "IDLE")!!) }.getOrDefault(UpdateStatus.IDLE), candidate,
             prefs.getLong("downloaded", 0), prefs.getLong("readyVersion", 0), prefs.getString("error", "").orEmpty(),
             prefs.getLong("checkedAt", 0), prefs.getBoolean("auto", true), prefs.getBoolean("mobile", false), prefs.getLong("declined", 0))
@@ -72,14 +72,14 @@ class UpdateStore(context: Context) {
     fun mark(status: UpdateStatus, error: String = "") = edit { putString("status", status.name); putString("error", error.take(250)) }
     fun checked(time: Long) = edit { putLong("checkedAt", time) }
     fun downloading(candidate: UpdateArtifact) = edit {
-        putString("candidate", GithubUpdateCatalog.encode(candidate)); putString("status", UpdateStatus.DOWNLOADING.name)
+        putString("candidate", GithubUpdateCatalog.encode(candidate, certificate)); putString("status", UpdateStatus.DOWNLOADING.name)
         putLong("downloaded", 0); putLong("readyVersion", 0); putString("error", "")
     }
     fun progress(version: Long, bytes: Long) = synchronized(lock) {
         val s=read();if(s.candidate?.versionCode==version && s.status==UpdateStatus.DOWNLOADING) edit { putLong("downloaded",bytes) }
     }
     fun ready(candidate: UpdateArtifact) = edit {
-        putString("candidate",GithubUpdateCatalog.encode(candidate));putLong("readyVersion",candidate.versionCode)
+        putString("candidate",GithubUpdateCatalog.encode(candidate, certificate));putLong("readyVersion",candidate.versionCode)
         putLong("downloaded",candidate.bytes);putString("status",UpdateStatus.READY.name);putString("error","")
     }
     fun cancel() = edit { putLong("declined",read().candidate?.versionCode ?: 0);putString("status",UpdateStatus.CANCELED.name);putString("error","") }

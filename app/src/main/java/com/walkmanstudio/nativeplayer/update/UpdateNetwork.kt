@@ -48,7 +48,7 @@ class GithubUpdateTransport : UpdateTransport {
     }
 }
 
-class GithubUpdateCatalog(private val transport: UpdateTransport) {
+class GithubUpdateCatalog(private val transport: UpdateTransport, private val certificate: String = BuildConfig.OTA_CERTIFICATE) {
     private fun json(url: String, limit: Int): JSONObject = transport.open(url).use { body ->
         require(body.length <= limit) { "Thông tin cập nhật quá lớn." }
         val output = ByteArrayOutputStream()
@@ -61,6 +61,7 @@ class GithubUpdateCatalog(private val transport: UpdateTransport) {
         JSONObject(output.toString(Charsets.UTF_8.name()))
     }
     fun latest(): UpdateArtifact? {
+        if (certificate.isEmpty()) return null
         val release = json(UpdateTrust.LATEST, 512 * 1024)
         if (release.optBoolean("draft", true) || release.optBoolean("prerelease", true)) return null
         val assets = release.getJSONArray("assets")
@@ -69,7 +70,7 @@ class GithubUpdateCatalog(private val transport: UpdateTransport) {
         require(manifests.size == 1)
         val manifestUrl = manifests.single().getString("browser_download_url")
         require(UpdateTrust.releaseUrl(manifestUrl) && URI(manifestUrl).path.endsWith("/update.json"))
-        val candidate = decode(json(manifestUrl, 64 * 1024))
+        val candidate = decode(json(manifestUrl, 64 * 1024), certificate)
         val apkAssets = (0 until assets.length()).map { assets.getJSONObject(it) }.filter { it.optString("browser_download_url") == candidate.url }
         require(apkAssets.size == 1 && apkAssets.single().getLong("size") == candidate.bytes)
         val digest = apkAssets.single().optString("digest")
@@ -77,13 +78,13 @@ class GithubUpdateCatalog(private val transport: UpdateTransport) {
         return candidate
     }
     companion object {
-        fun encode(candidate: UpdateArtifact): String = JSONObject().apply {
+        fun encode(candidate: UpdateArtifact, certificate: String = BuildConfig.OTA_CERTIFICATE): String = JSONObject().apply {
             put("schema", 1); put("versionCode", candidate.versionCode); put("versionName", candidate.versionName)
             put("minSdk", candidate.minSdk); put("bytes", candidate.bytes); put("sha256", candidate.sha256)
-            put("url", candidate.url); put("notes", candidate.notes); put("certificateSha256", UpdateTrust.CERTIFICATE)
+            put("url", candidate.url); put("notes", candidate.notes); put("certificateSha256", certificate)
         }.toString()
-        fun decode(json: JSONObject): UpdateArtifact {
-            require(json.getInt("schema") == 1 && json.getString("certificateSha256") == UpdateTrust.CERTIFICATE)
+        fun decode(json: JSONObject, certificate: String = BuildConfig.OTA_CERTIFICATE): UpdateArtifact {
+            require(json.getInt("schema") == 1 && json.getString("certificateSha256") == certificate)
             return UpdateArtifact(json.getLong("versionCode"), json.getString("versionName"), json.getInt("minSdk"),
                 json.getLong("bytes"), json.getString("sha256"), json.getString("url"), json.optString("notes").take(2000))
         }

@@ -10,15 +10,15 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from production_policy import read_policy
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = "stage12"
-APK_NAME = "walkman-native-stage12.apk"
-SOURCE_NAME = "walkman-native-stage12-code.zip"
+TAG = read_policy()["tag"]
+APK_NAME = f"walkman-native-{TAG}.apk"
+SOURCE_NAME = f"walkman-native-{TAG}-code.zip"
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("signed_apk", type=Path)
-parser.add_argument("stage11_apk", type=Path)
 parser.add_argument("output", type=Path, help="New staging directory outside the checkout")
 args = parser.parse_args()
 if args.output.resolve().is_relative_to(ROOT):
@@ -30,7 +30,7 @@ if subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=n
 
 subprocess.run(
     [sys.executable, str(ROOT / "qa/check-final-apk.py"), str(args.signed_apk),
-     "--stage", "12", "--previous-apk", str(args.stage11_apk)],
+     "--stage", "12"],
     cwd=ROOT, check=True,
 )
 report = json.loads((ROOT / "qa/stage12-apk.json").read_text())

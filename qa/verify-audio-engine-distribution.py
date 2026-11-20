@@ -10,15 +10,20 @@ import re
 import subprocess
 import sys
 import zipfile
+from production_policy import read_policy, verify_production_signature
 
 if not __debug__:
     sys.exit("Distribution validation requires Python assertions to be enabled")
 
 tools, output = map(Path, sys.argv[1:])
-stage = Path(__file__).resolve().parents[1] / "distribution/stage12"
-apk_name = "walkman-native-stage12.apk"
-source_name = "walkman-native-stage12-code.zip"
-pin = "2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2"
+policy = read_policy()
+tag = policy["tag"]
+version_code = int(policy["versionCode"])
+version_name = policy["versionName"]
+stage = Path(__file__).resolve().parents[1] / "distribution" / tag
+apk_name = f"walkman-native-{tag}.apk"
+source_name = f"walkman-native-{tag}-code.zip"
+pin = policy["certificateSha256"]
 
 
 def sha256(data):
@@ -26,7 +31,7 @@ def sha256(data):
 
 
 manifest = json.loads((stage / "READY.json").read_text())
-assert manifest["versionCode"] == 108 and manifest["versionName"] == "1.4.0-audio-engine"
+assert manifest["versionCode"] == version_code and manifest["versionName"] == version_name
 assert manifest["certificateSha256"] == pin
 records = manifest["files"]
 assert len(records) == 2 and {item["name"] for item in records} == {apk_name, source_name}
@@ -60,12 +65,14 @@ with zipfile.ZipFile(io.BytesIO(canonical_zip)) as canonical, zipfile.ZipFile(ou
         assert actual.read(installed) == canonical.read(item), item.filename
 
 apk = output / apk_name
+with zipfile.ZipFile(apk) as archive:
+    assert any(pin.encode("ascii") + b"\0" in archive.read(name)
+               for name in archive.namelist() if re.fullmatch(r"classes\d*\.dex", name))
+
 signature = subprocess.check_output(
     [tools / "apksigner", "verify", "--verbose", "--print-certs-pem", apk], text=True,
 )
-assert "Verified using v2 scheme (APK Signature Scheme v2): true" in signature.splitlines()
-assert "Number of signers: 1" in signature.splitlines()
-assert f"Signer #1 certificate SHA-256 digest: {pin}" in signature.splitlines()
+verify_production_signature(signature, policy)
 pem_match = re.search(r"-----BEGIN CERTIFICATE-----\n([A-Za-z0-9+/=\n]+)-----END CERTIFICATE-----", signature)
 assert pem_match
 pem = pem_match.group() + "\n"
@@ -76,7 +83,7 @@ assert sha256(base64.b64decode("".join(pem_match[1].splitlines()), validate=True
 badging = subprocess.check_output([tools / "aapt2", "dump", "badging", apk], text=True)
 package = next(line for line in badging.splitlines() if line.startswith("package:"))
 assert "name='com.walkmanstudio.nativeplayer'" in package
-assert "versionCode='108'" in package and "versionName='1.4.0-audio-engine'" in package
+assert f"versionCode='{version_code}'" in package and f"versionName='{version_name}'" in package
 assert "minSdkVersion:'26'" in badging.splitlines()
 assert "targetSdkVersion:'35'" in badging.splitlines()
 assert "application-debuggable" not in badging.splitlines()
@@ -86,10 +93,10 @@ subprocess.run([tools / "zipalign", "-c", "-P", "16", "4", apk], check=True)
 
 update = manifest["update"]
 assert update["schema"] == 1 and update["minSdk"] == 26
-assert update["versionCode"] == 108 and update["versionName"] == manifest["versionName"]
+assert update["versionCode"] == version_code and update["versionName"] == manifest["versionName"]
 assert update["certificateSha256"] == pin
 assert update["bytes"] == apk.stat().st_size and update["sha256"] == sha256(apk.read_bytes())
-assert update["url"] == f"https://github.com/Melbournejr/walkman-studio-native/releases/download/stage12/{apk_name}"
+assert update["url"] == f"https://github.com/Melbournejr/walkman-studio-native/releases/download/{tag}/{apk_name}"
 (output / "update.json").write_text(json.dumps(update, indent=2) + "\n")
 checksums = [f"{sha256(path.read_bytes())}  {path.name}" for path in sorted(output.iterdir())]
 (output / "SHA256SUMS").write_text("\n".join(checksums) + "\n")

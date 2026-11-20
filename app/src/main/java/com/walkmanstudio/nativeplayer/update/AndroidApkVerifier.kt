@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import com.walkmanstudio.nativeplayer.BuildConfig
 import com.walkmanstudio.nativeplayer.core.update.ApkIdentity
 import com.walkmanstudio.nativeplayer.core.update.UpdateArtifact
 import com.walkmanstudio.nativeplayer.core.update.UpdateValidation
@@ -45,6 +46,7 @@ class VerifiedUpdateFiles(
     private val archive: ArchiveIdentityReader,
     private val installed: () -> ApkIdentity,
     private val sdk: Int,
+    private val trustedCertificate: String = BuildConfig.OTA_CERTIFICATE,
 ) {
     fun target(candidate: UpdateArtifact): File = File(folder, candidate.fileName)
     fun verify(file: File, candidate: UpdateArtifact) {
@@ -53,6 +55,6 @@ class VerifiedUpdateFiles(
         file.inputStream().buffered().use { input -> val buffer=ByteArray(64*1024); while(true) {val n=input.read(buffer);if(n<0)break;digest.update(buffer,0,n)} }
         require(digest.digest().joinToString("") { "%02x".format(it) } == candidate.sha256) { "SHA-256 gói cập nhật không khớp." }
         val current = installed()
-        UpdateValidation.identity(archive.read(file), candidate, current.versionCode, current.certificates, sdk)
+        UpdateValidation.identity(archive.read(file), candidate, current.versionCode, current.certificates, sdk, trustedCertificate)
     }
 }

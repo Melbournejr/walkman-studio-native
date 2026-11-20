@@ -29,16 +29,17 @@ class UpdateFlowTest {
     private lateinit var context:Context
     private lateinit var store:UpdateStore
     private lateinit var folder:File
+    private val productionFixture = "a".repeat(64)
     private val data=byteArrayOf(1,2,3)
     private val url="https://github.com/${UpdateTrust.REPOSITORY}/releases/download/stage11/walkman-native-test.apk"
     private val manifestUrl="https://github.com/${UpdateTrust.REPOSITORY}/releases/download/stage11/update.json"
     private fun hash(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)}
     private fun candidate()=UpdateArtifact(107,"1.3.1",26,data.size.toLong(),hash(data),url,"Cải thiện cập nhật.")
-    private fun identity(version:Long=107,certificate:String=UpdateTrust.CERTIFICATE)=ApkIdentity(UpdateTrust.APP_ID,version,26,setOf(certificate))
+    private fun identity(version:Long=107,certificate:String=productionFixture)=ApkIdentity(UpdateTrust.APP_ID,version,26,setOf(certificate))
     @Before fun prepare(){
         context=ApplicationProvider.getApplicationContext<Application>()
         context.getSharedPreferences("application-updates",Context.MODE_PRIVATE).edit().clear().commit()
-        store=UpdateStore(context);folder=File(context.filesDir,"updates");folder.deleteRecursively();folder.mkdirs()
+        store=UpdateStore(context, productionFixture);folder=File(context.filesDir,"updates");folder.deleteRecursively();folder.mkdirs()
     }
     private class Transport(private val payloads:Map<String,ByteArray>):UpdateTransport {
         val calls=mutableListOf<String>();var closed=0
@@ -49,24 +50,29 @@ class UpdateFlowTest {
         put("assets",JSONArray().put(JSONObject().put("name","update.json").put("browser_download_url",manifest))
             .put(JSONObject().put("name","walkman-native-test.apk").put("browser_download_url",url).put("size",size).put("digest",digest)))
     }
-    private fun catalog(release:JSONObject=release(),manifest:String=GithubUpdateCatalog.encode(candidate())):Pair<GithubUpdateCatalog,Transport> {
+    private fun catalog(release:JSONObject=release(),manifest:String=GithubUpdateCatalog.encode(candidate(), productionFixture)):Pair<GithubUpdateCatalog,Transport> {
         val t=Transport(mapOf(UpdateTrust.LATEST to release.toString().toByteArray(),manifestUrl to manifest.toByteArray()))
-        return GithubUpdateCatalog(t) to t
+        return GithubUpdateCatalog(t, productionFixture) to t
     }
-    private fun files(cert:String=UpdateTrust.CERTIFICATE)=VerifiedUpdateFiles(folder,ArchiveIdentityReader{identity(certificate=cert)},{identity(106)},35)
+    private fun files(cert:String=productionFixture)=VerifiedUpdateFiles(folder,ArchiveIdentityReader{identity(certificate=cert)},{identity(106)},35,productionFixture)
     private fun runner(t:Transport=Transport(mapOf(url to data)),filePolicy:VerifiedUpdateFiles=files(),artifact:UpdateArtifact?=candidate(),notify:()->Unit={}):UpdateRunner =
         UpdateRunner(store,folder,{artifact},t,filePolicy,106,35,clock={5_000_000L},notifyReady=notify)
 
+    @Test fun unprovisionedBuildDoesNotContactTheReleaseFeed() {
+        val transport = Transport(emptyMap())
+        assertNull(GithubUpdateCatalog(transport, "").latest())
+        assertTrue(transport.calls.isEmpty())
+    }
     @Test fun defaultsUseAutomaticUnmeteredUpdates(){assertTrue(store.read().auto);assertFalse(store.read().mobile)}
-    @Test fun settingsSurviveRepositoryRecreation(){store.preferences(auto=false,mobile=true);val s=UpdateStore(context).read();assertFalse(s.auto);assertTrue(s.mobile);store.preferences(auto=true);val changed=UpdateStore(context).read();assertTrue(changed.auto);assertTrue("Updating auto must preserve the mobile-data preference",changed.mobile)}
-    @Test fun verifiedReadyStateSurvivesRestart(){store.ready(candidate());val s=UpdateStore(context).read();assertTrue(s.ready);assertEquals(candidate(),s.candidate);assertEquals(3L,s.downloaded)}
+    @Test fun settingsSurviveRepositoryRecreation(){store.preferences(auto=false,mobile=true);val s=UpdateStore(context, productionFixture).read();assertFalse(s.auto);assertTrue(s.mobile);store.preferences(auto=true);val changed=UpdateStore(context, productionFixture).read();assertTrue(changed.auto);assertTrue("Updating auto must preserve the mobile-data preference",changed.mobile)}
+    @Test fun verifiedReadyStateSurvivesRestart(){store.ready(candidate());val s=UpdateStore(context, productionFixture).read();assertTrue(s.ready);assertEquals(candidate(),s.candidate);assertEquals(3L,s.downloaded)}
     @Test fun progressCannotUndoCancellationOrOverwriteNewerCandidate(){store.downloading(candidate());store.cancel();store.progress(107,3);assertEquals(UpdateStatus.CANCELED,store.read().status);assertEquals(0L,store.read().downloaded);store.downloading(candidate().copy(versionCode=108));store.progress(107,3);assertEquals(0L,store.read().downloaded)}
     @Test fun clearsOnlyInstalledUpdateMetadata(){store.ready(candidate());store.clearInstalled(106);assertTrue(store.read().ready);store.clearInstalled(107);assertFalse(store.read().ready);assertNull(store.read().candidate)}
     @Test fun damagedPersistedMetadataNeverBecomesInstallable(){context.getSharedPreferences("application-updates",0).edit().putString("candidate","broken").putLong("readyVersion",107).commit();assertFalse(store.read().ready)}
-    @Test fun manifestRoundTripsWithoutLosingIdentity(){assertEquals(candidate(),GithubUpdateCatalog.decode(JSONObject(GithubUpdateCatalog.encode(candidate()))))}
+    @Test fun manifestRoundTripsWithoutLosingIdentity(){assertEquals(candidate(),GithubUpdateCatalog.decode(JSONObject(GithubUpdateCatalog.encode(candidate(), productionFixture)), productionFixture))}
     @Test fun catalogIgnoresDraftAndPrerelease(){assertNull(catalog(release(draft=true)).first.latest());assertNull(catalog(release(prerelease=true)).first.latest())}
     @Test fun catalogRejectsExternalManifestHost(){assertThrows(IllegalArgumentException::class.java){catalog(release(manifest="https://attacker.net/update.json")).first.latest()}}
-    @Test fun catalogRejectsManifestSignerChange(){val j=JSONObject(GithubUpdateCatalog.encode(candidate())).put("certificateSha256","0".repeat(64));assertThrows(IllegalArgumentException::class.java){catalog(manifest=j.toString()).first.latest()}}
+    @Test fun catalogRejectsManifestSignerChange(){val j=JSONObject(GithubUpdateCatalog.encode(candidate(), productionFixture)).put("certificateSha256","0".repeat(64));assertThrows(IllegalArgumentException::class.java){catalog(manifest=j.toString()).first.latest()}}
     @Test fun catalogRejectsSizeDifferentFromReleaseAsset(){assertThrows(IllegalArgumentException::class.java){catalog(release(size=4)).first.latest()}}
     @Test fun catalogRejectsDigestDifferentFromReleaseAsset(){assertThrows(IllegalArgumentException::class.java){catalog(release(digest="sha256:"+"0".repeat(64))).first.latest()}}
     @Test fun catalogRejectsOversizedManifestAndClosesBodies(){val pair=catalog(manifest=" ".repeat(70*1024));assertThrows(IllegalArgumentException::class.java){pair.first.latest()};assertEquals(2,pair.second.closed)}

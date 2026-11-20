@@ -1,26 +1,41 @@
-name: Publish Walkman Studio Native Stage 12
+name: Publish Walkman Studio Native production release
 
 on:
   workflow_dispatch:
+    inputs:
+      ota_validation_complete:
+        description: Confirm the same-signer Android upgrade and OTA validation passed
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: write
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
-  group: publish-native-stage12
+  group: publish-native-production
 
 jobs:
   publish:
     # The distribution files and workflow must reach main through normal review.
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.ota_validation_complete
     runs-on: ubuntu-latest
+    environment: production-signing
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Reconstruct and verify the signed OTA assets
+        env:
+          BACKED_UP_CERTIFICATE: ${{ vars.WALKMAN_BACKED_UP_CERTIFICATE_SHA256 }}
         run: |
+          expected="$(python3 qa/production_policy.py certificateSha256)"
+          [[ "$BACKED_UP_CERTIFICATE" == "$expected" ]]
           tools="$ANDROID_HOME/build-tools/35.0.0"
           if [ ! -x "$tools/apksigner" ]; then sdkmanager 'build-tools;35.0.0'; fi
           python3 qa/verify-audio-engine-distribution.py "$tools" "$RUNNER_TEMP/stage12"
@@ -29,8 +44,35 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           assets="$RUNNER_TEMP/stage12"
-          source_commit="$(jq -er .nativeCommit distribution/stage12/READY.json)"
-          gh release create stage12 "$assets"/* --target "$source_commit" --draft \
-            --title 'Walkman Studio Native 1.4.0 — Audio engine' \
-            --notes 'Version 108. High-resolution PCM DSP, EQ transitions and observed audio routing.'
-          gh release edit stage12 --draft=false --latest
+          tag="$(python3 qa/production_policy.py tag)"
+          version="$(python3 qa/production_policy.py versionName)"
+          source_commit="$(jq -er .nativeCommit "distribution/$tag/READY.json")"
+          gh api repos/Melbournejr/walkman-studio-native/releases/latest > "$RUNNER_TEMP/previous-release.json"
+          python3 qa/verify-production-continuity.py "$ANDROID_HOME/build-tools/35.0.0" \
+            "$RUNNER_TEMP/previous-release.json" "$assets/walkman-native-$tag.apk"
+          if [[ "$tag" == stage12 ]]; then
+            notes='First production-signed release. Uninstall Stage 11 before installing this APK. Uninstalling clears its private app data. Keep externally stored music and rescan after installation.'
+          else
+            notes="Production-signed Walkman Studio Native $version."
+          fi
+          gh release create "$tag" "$assets"/* --target "$source_commit" --draft \
+            --title "Walkman Studio Native $version" --notes "$notes"
+          gh api --paginate --slurp 'repos/Melbournejr/walkman-studio-native/releases?per_page=100' \
+            | jq -e --arg tag "$tag" '[.[][] | select(.tag_name == $tag and .draft)] | if length == 1 then .[0] else error("Expected one draft") end' \
+            > "$RUNNER_TEMP/stage12-draft.json"
+          python3 - "$assets" "$RUNNER_TEMP/stage12-draft.json" <<'PYTHON'
+          import hashlib
+          import json
+          from pathlib import Path
+          import sys
+
+          folder, draft = map(Path, sys.argv[1:])
+          assets = json.loads(draft.read_text())["assets"]
+          expected = {path.name: path for path in folder.iterdir()}
+          assert len(assets) == len(expected) and {asset["name"] for asset in assets} == expected.keys()
+          for asset in assets:
+              data = expected[asset["name"]].read_bytes()
+              assert asset["state"] == "uploaded" and asset["size"] == len(data)
+              assert asset["digest"] == "sha256:" + hashlib.sha256(data).hexdigest()
+          PYTHON
+          gh release edit "$tag" --draft=false --latest

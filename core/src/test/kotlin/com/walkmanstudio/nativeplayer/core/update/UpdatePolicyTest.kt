@@ -13,12 +13,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UpdatePolicyTest {
+    private val productionFixture = "a".repeat(64)
     private val data=byteArrayOf(1,2,3)
     private val url="https://github.com/${UpdateTrust.REPOSITORY}/releases/download/stage11/walkman-native-test.apk"
     private fun artifact(bytes:ByteArray=data)=UpdateArtifact(107,"1.3.1",26,bytes.size.toLong(),hash(bytes),url)
     private fun hash(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)}
-    private fun valid()=ApkIdentity(UpdateTrust.APP_ID,107,26,setOf(UpdateTrust.CERTIFICATE))
-    private fun verify(identity:ApkIdentity=valid(),installed:Long=106,certs:Set<String> = setOf(UpdateTrust.CERTIFICATE),sdk:Int=35)=UpdateValidation.identity(identity,artifact(),installed,certs,sdk)
+    private fun valid()=ApkIdentity(UpdateTrust.APP_ID,107,26,setOf(productionFixture))
+    private fun verify(identity:ApkIdentity=valid(),installed:Long=106,certs:Set<String> = setOf(productionFixture),sdk:Int=35)=UpdateValidation.identity(identity,artifact(),installed,certs,sdk,productionFixture)
 
     @Test fun acceptsOnlyCanonicalRepositoryReleaseUrl(){assertTrue(UpdateTrust.releaseUrl(url))}
     @Test fun rejectsOtherRepository(){assertFalse(UpdateTrust.releaseUrl(url.replace("walkman-studio-native/","walkman-player/")))}
@@ -37,7 +38,7 @@ class UpdatePolicyTest {
     @Test fun rejectsDifferentDownloadedSigner(){assertThrows(IllegalArgumentException::class.java){verify(valid().copy(certificates=setOf("0".repeat(64))))}}
     @Test fun rejectsUnofficialInstalledSigner(){assertThrows(IllegalArgumentException::class.java){verify(certs=setOf("0".repeat(64)))}}
     @Test fun rejectsIncompatibleSdk(){assertThrows(IllegalArgumentException::class.java){verify(valid().copy(minSdk=36))}}
-    @Test fun rejectsAdditionalSigners(){assertThrows(IllegalArgumentException::class.java){verify(valid().copy(certificates=setOf(UpdateTrust.CERTIFICATE,"1".repeat(64))))}}
+    @Test fun rejectsAdditionalSigners(){assertThrows(IllegalArgumentException::class.java){verify(valid().copy(certificates=setOf(productionFixture,"1".repeat(64))))}}
     @Test fun copiesExactBytesAndVerifiesDigest()=runBlocking {
         val output=ByteArrayOutputStream();assertEquals(3L,UpdateTransfer.copy(ByteArrayInputStream(data),output,artifact()));assertArrayEquals(data,output.toByteArray())
     }
@@ -58,5 +59,25 @@ class UpdatePolicyTest {
         val source=object:ByteArrayInputStream(bytes){override fun read(b:ByteArray,off:Int,len:Int):Int{largest=maxOf(largest,len);return super.read(b,off,len)}}
         UpdateTransfer.copy(source,ByteArrayOutputStream(),artifact(bytes)){progress=it}
         assertTrue(largest<=64*1024);assertEquals(bytes.size.toLong(),progress)
+    }
+    @Test fun productionMigrationRejectsHistoricalSignerAndUnprovisionedPolicy() {
+        val old = setOf("2354b7de5b85a17540a1b7e43b0c66e49295ea353c9f17c33d54e9f42338dff2")
+        assertThrows(IllegalArgumentException::class.java) { verify(certs = old) }
+        assertThrows(IllegalArgumentException::class.java) {
+            UpdateValidation.identity(valid(), artifact(), 106, setOf(productionFixture), 35, "")
+        }
+    }
+    @Test fun stage12ProductionInstallAcceptsOnlyIncreasingSameSignerUpdates() {
+        val next = artifact().copy(versionCode = 109, versionName = "1.4.1")
+        val identity = valid().copy(versionCode = 109)
+        val installed = setOf(productionFixture)
+        UpdateValidation.identity(identity, next, 108, installed, 35, productionFixture)
+        assertThrows(IllegalArgumentException::class.java) {
+            UpdateValidation.identity(identity, next, 109, installed, 35, productionFixture)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            UpdateValidation.identity(identity.copy(certificates = setOf("b".repeat(64))),
+                next, 108, installed, 35, productionFixture)
+        }
     }
 }
