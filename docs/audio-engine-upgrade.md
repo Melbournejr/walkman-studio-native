@@ -50,3 +50,24 @@ python3 qa/prepare-audio-engine-ota.py SIGNED_STAGE12.apk VERIFIED_STAGE11.apk S
 ```
 
 The command validates application identity, package version, certificate continuity, ABI, native libraries and 16 KiB alignment. It writes the signed APK, corresponding source ZIP, `update.json` `SHA256SUMS`, signature evidence and a checksummed `distribution/stage12` copy. Publish those assets on the reviewed `stage12` tag together. The application discovers the manifest through the latest published GitHub Release and validates the manifest, download content and APK signing identity before installation.
+
+## Host performance
+
+The C++ FIR comparison used seven alternating runs of the Stage 11 and upgraded `dsd-host-test` binaries on the same shared x86_64 host, using the same compiler options. Each run decodes two seconds of stereo DSD into 88.2 kHz PCM. The FIR benchmark excludes JNI and input I/O.
+
+| Input | Stage 11 median | Upgrade median | Maximum error vs. Float64 reference |
+| --- | ---: | ---: | ---: |
+| DSD64 | 120.6 ms | 70.2 ms | 2.37 × 10⁻⁸ FS |
+| DSD128 | 287.8 ms | 113.8 ms | 1.46 × 10⁻⁸ FS |
+| DSD256 | 562.9 ms | 405.6 ms | 9.39 × 10⁻⁹ FS |
+
+The native host test also checks bit order, stereo isolation, full scale, alternating-bit silence and split-buffer equivalence. It measures passband ripple below 0.015 dB through 20 kHz and sampled stopband attenuation above 70 dB from 44.1 to 100 kHz.
+
+Run `java -cp "$KOTLIN_STDLIB:core/build/libs/core.jar" qa/DspHostBenchmark.java` after building `:core:jar`. Use the Stage 11 core JAR on the same class path for comparison. The benchmark measures per-thread CPU time over seven steady-state runs, after three warmups.
+
+| 96 kHz stereo EQ | Stage 11 | Upgrade |
+| --- | ---: | ---: |
+| All bands at 0 dB | 23.73 ns/sample | 4.77 ns/sample |
+| All bands at +6 dB | 23.34 ns/sample | 34.01 ns/sample |
+
+Skipping identity filters speeds up the flat EQ. The dense preset costs more with the new filter-bank/state handling. Neither benchmark measures AudioTrack, ARM hardware, device power, or end-to-end playback latency.

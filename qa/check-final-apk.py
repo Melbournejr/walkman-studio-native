@@ -40,7 +40,7 @@ assert 'MediaButtonReceiver' in manifest
 assert int(attribute('foregroundServiceType'),0)&2,'FGS must include mediaPlayback'
 cert=run(java,'-jar',bt/'lib/apksigner.jar','verify','--verbose','--print-certs',apk)
 assert 'Verified using v2 scheme (APK Signature Scheme v2): true' in cert
-if stage==12: assert 'Number of signers: 1' in cert, 'OTA requires exactly one signer'
+if stage==12: assert 'Number of signers: 1' in cert.splitlines(), 'OTA requires exactly one signer'
 certificate=re.search(r'Signer #1 certificate SHA-256 digest: (\w+)',cert).group(1)
 previous_certificate=None
 if stage>=8:
