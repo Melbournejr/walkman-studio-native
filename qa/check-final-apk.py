@@ -113,16 +113,17 @@ with zipfile.ZipFile(apk) as archive,tempfile.TemporaryDirectory(prefix='walkman
   if name.endswith('/libwalkman_dsd.so'):
    symbols=run(readelf,'--dyn-syms',file)
    for method in ['create','decodeNative','destroy']:assert 'Java_com_walkmanstudio_nativeplayer_playback_dsd_NativeDsdFir_'+method in symbols,'JNI export missing'
-mapping=(root/'app/build/outputs/mapping/review/mapping.txt').read_text()
+mapping_variant='release' if stage==12 else 'review'
+mapping=(root/'app/build/outputs/mapping'/mapping_variant/'mapping.txt').read_text()
 cls='com.walkmanstudio.nativeplayer.playback.dsd.NativeDsdFir'
 assert f'{cls} -> {cls}:' in mapping,'JNI class renamed'
 # Unchanged native methods are omitted from R8 mapping; DEX declarations and ELF exports are checked above.
 report={'apk':apk.name,'bytes':apk.stat().st_size,'sha256':hashlib.sha256(apk.read_bytes()).hexdigest(),
  'applicationId':'com.walkmanstudio.nativeplayer','versionName':version_name,'versionCode':version_code,'minSdk':26,'targetSdk':35,
- 'variant':'review (release/R8 config, debuggable=false)','signature':'verified against the Stage 11 signing certificate' if stage==12 else 'existing build-environment install/test key; NOT user release key',
+ 'variant':mapping_variant,'signature':'verified against the Stage 11 signing certificate' if stage==12 else 'existing build-environment install/test key; NOT user release key',
  'certificateSha256':certificate,'previousCertificateSha256':previous_certificate,'updatesDeliveredStage7Signer':stage>=8,
  'apkV2Verified':True,'zip16KiBVerified':True,'elfLoadAlignments':loads,
  'forbiddenPermissionsAbsent':True,'nativeJniNamePreserved':True,'nativeMethodsVerified':sorted(jni_methods),
- 'notVerified':['installation/audio on physical Android','user keystore signing','16KiB-kernel execution']}
+ 'notVerified':['installation/audio on physical Android','16KiB-kernel execution']}
 (root/(f'qa/stage{arguments.stage}-apk.json' if stage>=8 else 'qa/final-apk.json')).write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report,indent=2))

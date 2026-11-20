@@ -43,7 +43,7 @@ Run the aggregate checks with the environment activated.
 
 Use the existing trusted Stage 11 signing identity through its custodian. The Stage 11 GitHub workflow verifies and uploads already signed bytes. It does not have a signing step. Review builds signed by the cloud environment's debug key cannot be installed as an update to Stage 11.
 
-After the test, review and signing gates pass, stage the release from the reviewed commit using the verified Stage 11 APK and the signed version 108 release-config APK. The checker uses the R8 mapping from the corresponding review build to verify the JNI class name.
+After the test, review and signing gates pass, stage the release from the reviewed commit using the verified Stage 11 APK and the signed version 108 release-config APK. The checker uses the R8 mapping from the corresponding release build to verify the JNI class name.
 
 ```sh
 python3 qa/prepare-audio-engine-ota.py SIGNED_STAGE12.apk VERIFIED_STAGE11.apk STAGING_DIRECTORY
@@ -71,3 +71,17 @@ Run `java -cp "$KOTLIN_STDLIB:core/build/libs/core.jar" qa/DspHostBenchmark.java
 | All bands at +6 dB | 23.34 ns/sample | 25.52 ns/sample |
 
 Skipping identity filters speeds up the flat EQ. The dense preset costs 2.18 ns/sample more with the new filter-bank and state handling. Neither benchmark measures AudioTrack, ARM hardware, device power, or end-to-end playback latency.
+
+
+## Protected signing workflow
+
+An owner can configure the GitHub Actions environment `stage12-signing` for reviewed `main` runs and restrict deployment branches and reviewers in repository settings. Add these environment secrets through GitHub's protected settings using the original Stage 11 signing entry.
+
+| Secret | Value |
+| --- | --- |
+| `WALKMAN_SIGNING_KEYSTORE_B64` | Base64 of the original keystore file |
+| `WALKMAN_SIGNING_STORE_PASSWORD` | Keystore password |
+| `WALKMAN_SIGNING_KEY_ALIAS` | Alias of the Stage 11 signing entry |
+| `WALKMAN_SIGNING_KEY_PASSWORD` | Password of that signing entry |
+
+After source review, dispatch **Build and sign Walkman Studio Native Stage 12** on `main`. The build job runs without signing secrets. The signing job validates the candidate against the exact published Stage 11 APK and uploads the staged distribution only after verification. Submit that generated distribution through normal review before dispatching **Publish Walkman Studio Native Stage 12**. The signing job has read-only repository access.

@@ -1,0 +1,93 @@
+name: Build and sign Walkman Studio Native Stage 12
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sign-native-stage12
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build and verify the reviewed source
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          sdkmanager --channel=3 'platforms;android-36' 'build-tools;35.0.0' 'ndk;30.0.16248370' 'cmake;3.22.1'
+          ./gradlew --console=plain --max-workers=2 \
+            :core:test :playback:hostNative :library:testDebugUnitTest \
+            :playback:testDebugUnitTest :app:testDebugUnitTest :app:assembleRelease \
+            :app:lintRelease :library:lintRelease :playback:lintRelease
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: stage12-signing-input
+          if-no-files-found: error
+          retention-days: 3
+          path: |
+            app/build/outputs/apk/release/app-release-unsigned.apk
+            app/build/outputs/mapping/release/mapping.txt
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: stage12-signing
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: stage12-signing-input
+          path: app/build/outputs
+      - name: Install APK verification tools
+        run: sdkmanager --channel=3 'build-tools;35.0.0' 'ndk;30.0.16248370'
+      - name: Sign using the existing Stage 11 key
+        env:
+          WALKMAN_SIGNING_KEYSTORE_B64: ${{ secrets.WALKMAN_SIGNING_KEYSTORE_B64 }}
+          WALKMAN_SIGNING_STORE_PASSWORD: ${{ secrets.WALKMAN_SIGNING_STORE_PASSWORD }}
+          WALKMAN_SIGNING_KEY_ALIAS: ${{ secrets.WALKMAN_SIGNING_KEY_ALIAS }}
+          WALKMAN_SIGNING_KEY_PASSWORD: ${{ secrets.WALKMAN_SIGNING_KEY_PASSWORD }}
+        run: |
+          for name in WALKMAN_SIGNING_KEYSTORE_B64 WALKMAN_SIGNING_STORE_PASSWORD WALKMAN_SIGNING_KEY_ALIAS WALKMAN_SIGNING_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              printf 'Required signing secret missing: %s\n' "$name" >&2
+              exit 1
+            fi
+          done
+          umask 077
+          keystore="$(mktemp "$RUNNER_TEMP/walkman-keystore.XXXXXXXX")"
+          trap 'rm -f -- "$keystore"' EXIT
+          printf '%s' "$WALKMAN_SIGNING_KEYSTORE_B64" | base64 --decode > "$keystore"
+          tools="$ANDROID_HOME/build-tools/35.0.0"
+          unsigned=app/build/outputs/apk/release/app-release-unsigned.apk
+          "$tools/zipalign" -c -P 16 4 "$unsigned"
+          "$tools/apksigner" sign --ks "$keystore" \
+            --ks-key-alias "$WALKMAN_SIGNING_KEY_ALIAS" \
+            --ks-pass env:WALKMAN_SIGNING_STORE_PASSWORD \
+            --key-pass env:WALKMAN_SIGNING_KEY_PASSWORD \
+            --out "$RUNNER_TEMP/stage12-signed.apk" "$unsigned"
+      - name: Verify continuity and prepare the reviewed distribution
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            https://github.com/Melbournejr/walkman-studio-native/releases/download/stage11/walkman-native-stage11.apk \
+            --output "$RUNNER_TEMP/stage11.apk"
+          printf '%s  %s\n' 0771ab03c70cc6b63544008933fda3079cfc04514769192bc10140b1e97423da \
+            "$RUNNER_TEMP/stage11.apk" | sha256sum --check
+          python3 qa/prepare-audio-engine-ota.py "$RUNNER_TEMP/stage12-signed.apk" \
+            "$RUNNER_TEMP/stage11.apk" "$RUNNER_TEMP/stage12-staged"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: stage12-verified-distribution
+          path: ${{ runner.temp }}/stage12-staged/
+          if-no-files-found: error
+          retention-days: 7
