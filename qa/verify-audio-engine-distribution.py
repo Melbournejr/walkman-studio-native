@@ -77,7 +77,7 @@ badging = subprocess.check_output([tools / "aapt2", "dump", "badging", apk], tex
 package = next(line for line in badging.splitlines() if line.startswith("package:"))
 assert "name='com.walkmanstudio.nativeplayer'" in package
 assert "versionCode='108'" in package and "versionName='1.4.0-audio-engine'" in package
-assert "sdkVersion:'26'" in badging.splitlines()
+assert "minSdkVersion:'26'" in badging.splitlines()
 assert "targetSdkVersion:'35'" in badging.splitlines()
 assert "application-debuggable" not in badging.splitlines()
 abi = next(line for line in badging.splitlines() if line.startswith("native-code:"))
