@@ -71,7 +71,8 @@ class DspProcessorTest {
             assertEquals(C.ENCODING_PCM_FLOAT, format.encoding)
             assertEquals(96000, format.sampleRate)
             processor.flush(AudioProcessor.StreamMetadata.DEFAULT)
-            processor.queueInput(bytes.flip())
+            bytes.flip()
+            processor.queueInput(bytes)
             val result = processor.output
             return FloatArray(result.remaining() / 4) { result.float }
         }
