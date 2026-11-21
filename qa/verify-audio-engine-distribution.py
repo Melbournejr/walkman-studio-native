@@ -15,12 +15,18 @@ from production_policy import read_policy, verify_production_signature
 if not __debug__:
     sys.exit("Distribution validation requires Python assertions to be enabled")
 
-tools, output = map(Path, sys.argv[1:])
+if len(sys.argv) not in (3, 4):
+    sys.exit(f"Usage: {sys.argv[0]} BUILD_TOOLS OUTPUT [DISTRIBUTION]")
+
+tools, output = map(Path, sys.argv[1:3])
 policy = read_policy()
 tag = policy["tag"]
 version_code = int(policy["versionCode"])
 version_name = policy["versionName"]
-stage = Path(__file__).resolve().parents[1] / "distribution" / tag
+stage = (
+    Path(sys.argv[3]) if len(sys.argv) == 4
+    else Path(__file__).resolve().parents[1] / "distribution" / tag
+)
 apk_name = f"walkman-native-{tag}.apk"
 source_name = f"walkman-native-{tag}-code.zip"
 pin = policy["certificateSha256"]

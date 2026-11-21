@@ -1,15 +1,19 @@
 name: Publish Walkman Studio Native production release
 
 on:
+  workflow_run:
+    workflows: [Build and sign Walkman Studio Native production release]
+    branches: [main]
+    types: [completed]
   workflow_dispatch:
     inputs:
-      ota_validation_complete:
-        description: Confirm the same-signer Android upgrade and OTA validation passed
-        type: boolean
+      signing_run_id:
+        description: Successful production signing run ID on main
+        type: string
         required: true
-        default: false
 
 permissions:
+  actions: read
   contents: write
 
 defaults:
@@ -21,8 +25,10 @@ concurrency:
 
 jobs:
   publish:
-    # The distribution files and workflow must reach main through normal review.
-    if: github.ref == 'refs/heads/main' && inputs.ota_validation_complete
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+        github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     environment: production-signing
     steps:
@@ -30,24 +36,54 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify the production signing run
+        id: signing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.signing_run_id }}
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          workflow_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/sign-native-stage12.yml" --jq .id)"
+          [[ "$workflow_id" =~ ^[0-9]+$ ]]
+          source_commit="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" | jq -er \
+            --arg repo "$GITHUB_REPOSITORY" --argjson workflow_id "$workflow_id" '
+              select(.workflow_id == $workflow_id
+                and .event == "workflow_dispatch"
+                and .head_branch == "main"
+                and .head_repository.full_name == $repo
+                and .conclusion == "success")
+              | .head_sha | select(test("^[0-9a-f]{40}$"))')"
+          git merge-base --is-ancestor "$source_commit" HEAD
+          printf 'run_id=%s\nsource_commit=%s\n' "$RUN_ID" "$source_commit" >> "$GITHUB_OUTPUT"
+      - name: Download the verified signing distribution
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: stage12-verified-distribution
+          path: ${{ runner.temp }}/signed-distribution
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.signing.outputs.run_id }}
       - name: Provision the APK verification SDK
         run: bash .github/scripts/setup-android-sdk.sh publish
       - name: Reconstruct and verify the signed OTA assets
         env:
           BACKED_UP_CERTIFICATE: ${{ vars.WALKMAN_BACKED_UP_CERTIFICATE_SHA256 }}
+          SOURCE_COMMIT: ${{ steps.signing.outputs.source_commit }}
         run: |
           expected="$(python3 qa/production_policy.py certificateSha256)"
           [[ "$BACKED_UP_CERTIFICATE" == "$expected" ]]
           tools="$ANDROID_HOME/build-tools/35.0.0"
-          python3 qa/verify-audio-engine-distribution.py "$tools" "$RUNNER_TEMP/stage12"
+          tag="$(python3 qa/production_policy.py tag)"
+          distribution="$RUNNER_TEMP/signed-distribution/distribution/$tag"
+          jq -e --arg sha "$SOURCE_COMMIT" '.nativeCommit == $sha' "$distribution/READY.json"
+          python3 qa/verify-audio-engine-distribution.py "$tools" "$RUNNER_TEMP/stage12" "$distribution"
       - name: Publish the reviewed release
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ steps.signing.outputs.source_commit }}
         run: |
           assets="$RUNNER_TEMP/stage12"
           tag="$(python3 qa/production_policy.py tag)"
           version="$(python3 qa/production_policy.py versionName)"
-          source_commit="$(jq -er .nativeCommit "distribution/$tag/READY.json")"
           gh api repos/Melbournejr/walkman-studio-native/releases/latest > "$RUNNER_TEMP/previous-release.json"
           python3 qa/verify-production-continuity.py "$ANDROID_HOME/build-tools/35.0.0" \
             "$RUNNER_TEMP/previous-release.json" "$assets/walkman-native-$tag.apk"
@@ -58,7 +94,10 @@ jobs:
             product="Mio Player"
             notes="Production-signed $product $version."
           fi
-          gh release create "$tag" "$assets"/* --target "$source_commit" --draft \
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            [[ "$(git rev-parse "refs/tags/$tag^{commit}")" == "$SOURCE_COMMIT" ]]
+          fi
+          gh release create "$tag" "$assets"/* --target "$SOURCE_COMMIT" --draft \
             --title "$product $version" --notes "$notes"
           gh api --paginate --slurp 'repos/Melbournejr/walkman-studio-native/releases?per_page=100' \
             | jq -e --arg tag "$tag" '[.[][] | select(.tag_name == $tag and .draft)] | if length == 1 then .[0] else error("Expected one draft") end' \
