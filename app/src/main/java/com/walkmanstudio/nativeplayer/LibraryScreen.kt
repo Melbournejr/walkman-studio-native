@@ -102,17 +102,28 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                         inCollection -> model::back
                         else -> null
                     }
-                    MioHeader(title, back = back, editorial = tab == "library" && !inCollection) {
-                        if (tab in setOf("library", "folders", "favorites")) {
-                            if (!inCollection) IconButton(onClick = { model.selectTab("library"); model.browse("songs") }) {
-                                StudioIcon(R.drawable.ic_mio_search, "Tìm bài hát")
-                            }
-                            Box {
-                                IconButton(onClick = { libraryMenu = true }) { StudioIcon(R.drawable.ic_more, "Tùy chọn thư viện") }
-                                DropdownMenu(libraryMenu, { libraryMenu = false }) {
-                                    DropdownMenuItem(text = { Text("Thêm thư mục nhạc") }, onClick = { libraryMenu = false; chooseTree() })
-                                    DropdownMenuItem(text = { Text("Yêu thích") }, onClick = { libraryMenu = false; model.selectTab("favorites") })
+                    Column {
+                        MioHeader(title, back = back, editorial = tab == "library" && !inCollection) {
+                            if (tab in setOf("library", "folders", "favorites")) {
+                                if (!inCollection) IconButton(onClick = { model.selectTab("library"); model.browse("songs") }) {
+                                    StudioIcon(R.drawable.ic_mio_search, "Tìm bài hát")
                                 }
+                                Box {
+                                    IconButton(onClick = { libraryMenu = true }) { StudioIcon(R.drawable.ic_more, "Tùy chọn thư viện") }
+                                    DropdownMenu(libraryMenu, { libraryMenu = false }) {
+                                        DropdownMenuItem(text = { Text("Thêm thư mục nhạc") }, onClick = { libraryMenu = false; chooseTree() })
+                                        DropdownMenuItem(text = { Text("Yêu thích") }, onClick = { libraryMenu = false; model.selectTab("favorites") })
+                                    }
+                                }
+                            }
+                        }
+                        if (tab == "library" && !inCollection) {
+                            MioLibraryTabs(browser) { choice ->
+                                if (choice == "folders") model.selectTab("folders") else model.browse(choice)
+                            }
+                        } else if (tab == "folders" && !inCollection) {
+                            MioLibraryTabs("folders") { choice ->
+                                if (choice != "folders") { model.selectTab("library"); model.browse(choice) }
                             }
                         }
                     }
@@ -137,17 +148,11 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                     } else if (tab == "audio") {
                         item { Box(Modifier.fillMaxWidth().padding(horizontal = MioSpacing.gutter, vertical = 10.dp)) { AudioLab(playback) } }
                     } else if (tab == "folders" && f.rootId == null) {
-                        item { MioLibraryTabs("folders") { choice -> if (choice != "folders") { model.selectTab("library"); model.browse(choice) } } }
                         items(roots, key = { "root-${it.id}" }) { root -> RootCard(root, scans.firstOrNull { it.rootId == root.id },
                             { model.openFolder(root.id) }, { model.rescan(root.id) }, { model.rescan(root.id, true) }, { model.cancel(root.id) }, { removeRootId = root.id }, chooseTree) }
                         item { TextButton(onClick = chooseTree, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Thêm thư mục nhạc") } }
                     } else {
                         if (roots.isEmpty() && browser != "playlists") item { MioLibraryEmpty(chooseTree) }
-                        if (tab == "library" && !inCollection) item {
-                            MioLibraryTabs(browser) { choice ->
-                                if (choice == "folders") model.selectTab("folders") else model.browse(choice)
-                            }
-                        }
                         metadataProgress?.let { progress -> item { Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) { Text(progress, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium); TextButton(onClick = { model.cancelMetadata() }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Hủy") } } } }
                         items(scans.filter { it.running || it.state == "PERMISSION_LOST" }, key = { "scan-${it.rootId}" }) { status -> ScanCard(roots.firstOrNull { it.id == status.rootId }?.displayName ?: "Thư mục", status, { model.cancel(status.rootId) }, chooseTree) }
                         if (tab == "library" && browser == "albums" && !inCollection) {

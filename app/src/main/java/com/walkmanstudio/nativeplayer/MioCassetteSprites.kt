@@ -78,8 +78,9 @@ internal fun MioCassetteSprites(
     BoxWithConstraints(Modifier.fillMaxSize().mioGraphite().clipToBounds()) {
         // Keep the approved 390 dp portrait scale on large phones. On short
         // windows, scroll before shrinking the hardware below a usable width.
+        val minimumWidth = if (maxWidth > maxHeight) 300.dp else 320.dp
         val canvasWidth = minOf(maxWidth * 1.018f, 390.dp * 1.018f,
-            (maxHeight * (941f / 1672f)).coerceAtLeast(320.dp))
+            (maxHeight * (941f / 1672f)).coerceAtLeast(minimumWidth))
         val unit = canvasWidth / 941
         val canvasHeight = unit * 1672
         val top = ((maxHeight - canvasHeight).coerceAtLeast(0.dp) * .42f).coerceAtMost(40.dp)
@@ -203,7 +204,7 @@ internal fun MioCassetteSprites(
                     TextButton(onClick = actions.palette, modifier = Modifier.heightIn(min = 48.dp),
                         shape = RoundedCornerShape(22.dp), colors = ButtonDefaults.textButtonColors(
                             containerColor = Color(0xFF1C1C1D), contentColor = colors.onSurface)) {
-                        Text("Retro Mode")
+                        Text("Retro Studio")
                         Spacer(Modifier.width(10.dp))
                         StudioIcon(R.drawable.ic_expand, modifier = Modifier.size(15.dp))
                     }

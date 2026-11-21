@@ -67,7 +67,7 @@ internal fun MioSettingsContent(
                 NowPlayingMode.entries.forEach { mode ->
                     MioRadioRow(mode.label, displayMode == mode) { model.setNowPlayingMode(mode) }
                 }
-                Text("Bảng màu retro", style = MaterialTheme.typography.titleMedium)
+                Text("Bảng màu cassette cổ điển và đĩa than", style = MaterialTheme.typography.titleMedium)
                 WalkmanTheme.entries.forEach { color ->
                     MioRadioRow(color.model, theme == color) { model.setWalkmanTheme(color) }
                 }

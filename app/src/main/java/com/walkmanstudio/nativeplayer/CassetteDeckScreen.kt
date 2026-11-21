@@ -58,7 +58,8 @@ internal fun CassetteDeckScreen(
     state: CassetteScreenState,
     actions: CassetteActions,
     modifier: Modifier = Modifier,
-    visible: Boolean = true,
+    visible: Boolean,
+    studio: Boolean,
 ) {
     CompositionLocalProvider(LocalContentColor provides theme.ink) {
         MaterialTheme(colorScheme = theme.colors) {
@@ -143,7 +144,9 @@ internal fun CassetteDeckScreen(
             }
             BoxWithConstraints(modifier.fillMaxSize().background(theme.body).testTag("cassette-player")) {
                 val viewportHeight = maxHeight
-                if (maxWidth > maxHeight) {
+                if (studio) {
+                    MioCassetteSprites(state, actions, rotation, progress, deckSeek) { seek(false) }
+                } else if (maxWidth > maxHeight) {
                     // Landscape is a full-width instrument panel. Its tape artwork is
                     // redrawn for this viewport; the portrait cassette is never stretched.
                     Box(Modifier.fillMaxSize().testTag("cassette-art").then(deckSeek)) {
@@ -179,8 +182,6 @@ internal fun CassetteDeckScreen(
                             }
                         }
                     }
-                } else if (theme == WalkmanTheme.MIO) {
-                    MioCassetteSprites(state, actions, rotation, progress, deckSeek) { seek(false) }
                 } else {
                     // Keep an accessibility scroll ancestor, while measuring a bounded
                     // content group. At 100% the tested400x800/360x640 viewports do not scroll.

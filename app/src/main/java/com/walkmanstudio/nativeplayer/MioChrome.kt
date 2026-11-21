@@ -153,7 +153,7 @@ internal fun MioAlbumTile(
                 Text(title, style = MaterialTheme.typography.titleMedium.copy(
                     fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal,
                     fontSize = 15.sp, lineHeight = 18.sp,
-                ), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                ), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (artist.isNotBlank()) Text(artist, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
                     overflow = TextOverflow.Ellipsis)

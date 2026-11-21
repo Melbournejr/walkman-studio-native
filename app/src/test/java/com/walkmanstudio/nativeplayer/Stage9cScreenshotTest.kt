@@ -72,7 +72,7 @@ class Stage9cScreenshotTest {
             CompositionLocalProvider(LocalDensity provides Density(1f,scene.scale)) {
                 MaterialTheme(colorScheme=WalkmanTheme.TPS_L2.colors) {
                     key(scene.id) { Box(Modifier.size(scene.width.dp,scene.height.dp).background(Color.Black).testTag(SCENE)) {
-                        CassettePlayerScreen(WalkmanTheme.TPS_L2,scene.state,CassetteActions(),
+                        ClassicCassetteForTest(WalkmanTheme.TPS_L2,scene.state,CassetteActions(),
                             Modifier.fillMaxSize().padding(top=24.dp,bottom=16.dp))
                     } }
                 }
@@ -128,7 +128,7 @@ class Stage9cScreenshotTest {
         var scene by mutableStateOf(Scene(false,Status.PLAYING,TitleKind.SHORT,false,1f,compact=true))
         compose.setContent {
             key(scene.id) { Box(Modifier.size(360.dp,640.dp).testTag(SCENE)) {
-                CassettePlayerScreen(WalkmanTheme.TPS_L2,scene.state,CassetteActions(),Modifier.fillMaxSize().padding(top=24.dp,bottom=16.dp))
+                ClassicCassetteForTest(WalkmanTheme.TPS_L2,scene.state,CassetteActions(),Modifier.fillMaxSize().padding(top=24.dp,bottom=16.dp))
             } }
         }
         for(status in Status.entries) for(title in TitleKind.entries) for(dsd in listOf(false,true)) {
@@ -219,7 +219,7 @@ class Stage9cScreenshotTest {
         var known by mutableStateOf(true)
         compose.setContent {
             Box(Modifier.size(400.dp,800.dp)) {
-                CassettePlayerScreen(WalkmanTheme.TPS_L2,CassetteScreenState(title="Mưa chiều",positionMs=position,
+                ClassicCassetteForTest(WalkmanTheme.TPS_L2,CassetteScreenState(title="Mưa chiều",positionMs=position,
                     durationMs=duration,timelineKnown=known,seekEnabled=false),CassetteActions(),Modifier.fillMaxSize())
             }
         }
@@ -248,7 +248,7 @@ class Stage9cScreenshotTest {
             CompositionLocalProvider(LocalDensity provides Density(1f,scene.scale)) {
                 MaterialTheme(colorScheme=WalkmanTheme.TPS_L2.colors) {
                     key(scene.id) { Box(Modifier.size(scene.width.dp,scene.height.dp).background(Color.Black).testTag(SCENE)) {
-                        CassettePlayerScreen(WalkmanTheme.TPS_L2,scene.state,CassetteActions(),
+                        ClassicCassetteForTest(WalkmanTheme.TPS_L2,scene.state,CassetteActions(),
                             Modifier.fillMaxSize().padding(top=24.dp,bottom=16.dp))
                     } }
                 }

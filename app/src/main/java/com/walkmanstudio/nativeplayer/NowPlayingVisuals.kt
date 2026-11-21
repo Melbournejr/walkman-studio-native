@@ -42,7 +42,12 @@ import kotlin.math.sin
 import kotlin.math.PI
 
 enum class NowPlayingMode(val id: String, val label: String) {
-    CLASSIC("classic", "Hiện đại"), CASSETTE("cassette", "Cassette retro"), VINYL("vinyl", "Đĩa than");
+    CLASSIC("classic", "Hiện đại"),
+    CASSETTE("cassette", "Retro Cassette Studio"),
+    VINYL("vinyl", "Đĩa than"),
+    CASSETTE_CLASSIC("cassette_classic", "Cassette cổ điển");
+
+    val isCassette: Boolean get() = this == CASSETTE || this == CASSETTE_CLASSIC
     companion object { fun find(id: String?) = entries.firstOrNull { it.id == id } ?: CLASSIC }
 }
 
@@ -174,7 +179,7 @@ fun NowPlayingVisual(
     }
     Box(modifier.then(seekModifier), contentAlignment = Alignment.Center) {
         when (mode) {
-            NowPlayingMode.CASSETTE -> CassetteFace(theme, title, artist, displayProgress, (displayProgress * safeDuration).toLong(), rotation, durationKnown)
+            NowPlayingMode.CASSETTE, NowPlayingMode.CASSETTE_CLASSIC -> CassetteFace(theme, title, artist, displayProgress, (displayProgress * safeDuration).toLong(), rotation, durationKnown)
             NowPlayingMode.VINYL -> VinylFace(theme, title, displayProgress, !playing || seeking || dragged != null, rotation, albumArt)
             NowPlayingMode.CLASSIC -> albumArt(Modifier.fillMaxSize())
         }

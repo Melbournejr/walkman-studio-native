@@ -23,7 +23,7 @@ class PlayerDisplaySettingsTest {
         PlayerDisplaySettings.setCassetteLandscape(context,true)
         assertTrue(PlayerDisplaySettings.cassetteLandscape(context))
         for(mode in NowPlayingMode.entries) for(show in listOf(false,true)) {
-            val expected=if(show && mode==NowPlayingMode.CASSETTE) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            val expected=if(show && mode.isCassette) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             assertEquals(expected,CassetteOrientation.requested(show,mode,PlayerDisplaySettings.cassetteLandscape(context)))
         }
         PlayerDisplaySettings.setCassetteLandscape(context,false)

@@ -100,7 +100,7 @@ class MioScreensTest {
                             bands = listOf(-1.0, -.5, 2.0, 4.0, 1.0, -1.5, -1.0, 2.4, 4.8, 3.0))) }
                         MioEqualizer(equalizer, {}, { equalizer = it }) {}
                     } else if (extra == "retro") {
-                        CassettePlayerScreen(WalkmanTheme.MIO, CassetteScreenState(
+                        CassettePlayerScreen(WalkmanTheme.TPS_L2, CassetteScreenState(
                             referenceTrack.title, referenceTrack.artist, referenceTrack.album, referenceTrack.positionMs, referenceTrack.durationMs,
                             playing = true, requested = true, queueIndex = 1, queueCount = 4, specs = specs),
                             CassetteActions(stop = { stopped = true }, toggle = { toggled = true },
@@ -161,7 +161,7 @@ class MioScreensTest {
             }
         }
         compose.runOnIdle { mode = "dark"; extra = "retro" }
-        compose.onNodeWithText("Retro Mode").assertIsDisplayed()
+        compose.onNodeWithText("Retro Studio").assertIsDisplayed()
         compose.onNodeWithContentDescription("Dừng phát").assertIsDisplayed()
         savePreview("retro-cassette", view)
         compose.onNodeWithContentDescription("Dừng phát").performClick()
@@ -295,15 +295,19 @@ class MioScreensTest {
     }
 
     @Config(qualifiers = "w500dp-h1100dp-mdpi")
-    @Test fun tallPortraitKeepsCassetteAtTheApprovedScaleWithBoundedTopSpace() {
+    @Test fun savedBlueCassetteOpensStudioAtTheApprovedPortraitScale() {
+        val context = org.robolectric.RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("appearance", android.content.Context.MODE_PRIVATE).edit()
+            .putString("playerDisplay", "cassette").apply()
         compose.setContent {
             StudioTheme("dark") {
                 Surface(Modifier.size(480.dp, 1040.dp)) {
                     CassettePlayerScreen(
-                        WalkmanTheme.MIO,
+                        WalkmanTheme.TPS_L2,
                         CassetteScreenState("Bên kia mùa mưa", durationMs = 296000, positionMs = 84000,
                             requested = true, timelineKnown = true, seekEnabled = true),
                         CassetteActions(stop = {}), visible = false,
+                        mode = PlayerDisplaySettings.read(context),
                     )
                 }
             }
@@ -314,7 +318,21 @@ class MioScreensTest {
         assertTrue("Cassette width stays at the approved portrait size", deck.width <= 380f)
         assertTrue("The hardware begins below the header without a tall-screen void", deck.top <= 110f)
         assertTrue("The transport remains inside the cassette case", keys.top > deck.top && keys.bottom < deck.bottom)
+        compose.onNodeWithText("Retro Studio").assertIsDisplayed()
         compose.onNodeWithContentDescription("Dừng phát").assertIsDisplayed()
+    }
+
+    @Config(qualifiers = "w844dp-h390dp-mdpi")
+    @Test fun landscapeStudioKeepsCassetteAndTransportReachableWithSavedPalette() {
+        var stopInvoked = false
+        compose.setContent {
+            CassettePlayerScreen(WalkmanTheme.TPS_L2, CassetteScreenState(title = "Mưa chiều"),
+                CassetteActions(stop = { stopInvoked = true }), visible = false)
+        }
+        compose.onNodeWithText("Retro Studio").assertIsDisplayed()
+        compose.onNodeWithTag("mio-window", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Dừng phát").performScrollTo().performClick()
+        assertTrue(stopInvoked)
     }
 
     @Test fun compactPlayerKeepsActionsAtLargeFontWithMissingArtwork() {

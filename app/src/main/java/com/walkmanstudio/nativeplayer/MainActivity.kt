@@ -93,6 +93,6 @@ class MainActivity : ComponentActivity() {
 /** Activity-only policy; neither orientation nor Compose owns the service/player. */
 internal object CassetteOrientation {
     fun requested(showNowPlaying: Boolean, mode: NowPlayingMode, alwaysLandscape: Boolean): Int =
-        if (showNowPlaying && mode == NowPlayingMode.CASSETTE && alwaysLandscape)
+        if (showNowPlaying && mode.isCassette && alwaysLandscape)
             ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 }

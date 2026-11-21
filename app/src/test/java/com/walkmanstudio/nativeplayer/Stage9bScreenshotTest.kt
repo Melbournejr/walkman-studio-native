@@ -65,7 +65,7 @@ class Stage9bScreenshotTest {
         val cases = buildList {
             for (landscape in listOf(false,true)) for (title in TitleKind.entries)
                 for (dsd in listOf(false,true)) for (scale in listOf(1f,2f))
-                    for (idle in listOf(false,true)) for (mode in listOf(NowPlayingMode.CASSETTE,NowPlayingMode.VINYL))
+                    for (idle in listOf(false,true)) for (mode in listOf(NowPlayingMode.CASSETTE_CLASSIC,NowPlayingMode.VINYL))
                         add(Scene(landscape,title,dsd,scale,idle,mode))
         }
         assertEquals(96,cases.size)
@@ -94,7 +94,7 @@ class Stage9bScreenshotTest {
         for (case in cases) {
             compose.runOnIdle { scene=case }
             compose.waitForIdle()
-            val labelTag=if(case.mode==NowPlayingMode.CASSETTE) "cassette-label" else "vinyl-label"
+            val labelTag=if(case.mode==NowPlayingMode.CASSETTE_CLASSIC) "cassette-label" else "vinyl-label"
             compose.onAllNodesWithText(case.state.title,useUnmergedTree=true).assertCountEquals(1)
             compose.onNodeWithTag(labelTag,useUnmergedTree=true).assertExists()
             compose.onAllNodesWithContentDescription("Thêm vào yêu thích").assertCountEquals(1)
@@ -140,7 +140,7 @@ class Stage9bScreenshotTest {
     }
 
     @Test fun portraitFont200RetainsReachableControlsAndUnknownIdleCannotSeek() {
-        var scene by mutableStateOf(Scene(false,TitleKind.LONG,true,2f,true,NowPlayingMode.CASSETTE))
+        var scene by mutableStateOf(Scene(false,TitleKind.LONG,true,2f,true,NowPlayingMode.CASSETTE_CLASSIC))
         var seeks=0;var plays=0;var sounds=0;var queues=0
         val actions=CassetteActions(seek={seeks++},toggle={plays++},sound={sounds++},queue={queues++})
         compose.setContent {
@@ -154,7 +154,7 @@ class Stage9bScreenshotTest {
                 }
             }
         }
-        for (mode in listOf(NowPlayingMode.CASSETTE,NowPlayingMode.VINYL)) {
+        for (mode in listOf(NowPlayingMode.CASSETTE_CLASSIC,NowPlayingMode.VINYL)) {
             compose.runOnIdle { scene=scene.copy(mode=mode) }
             compose.onNodeWithContentDescription("Phát").performScrollTo().assertIsDisplayed().performClick()
             compose.onNodeWithContentDescription("Cài đặt âm thanh").performScrollTo().assertIsDisplayed().performClick()
@@ -167,7 +167,7 @@ class Stage9bScreenshotTest {
     }
 
     @Test fun knownUnseekableTimelineAdvancesBothVisualsWithoutEnablingSeek() {
-        var mode by mutableStateOf(NowPlayingMode.CASSETTE)
+        var mode by mutableStateOf(NowPlayingMode.CASSETTE_CLASSIC)
         var state by mutableStateOf(CassetteScreenState(title="Mưa chiều",positionMs=60_000,
             durationMs=240_000,seekEnabled=false,timelineKnown=true))
         var seeks=0
@@ -181,7 +181,7 @@ class Stage9bScreenshotTest {
                 }
             }
         }
-        for (visual in listOf(NowPlayingMode.CASSETTE,NowPlayingMode.VINYL)) {
+        for (visual in listOf(NowPlayingMode.CASSETTE_CLASSIC,NowPlayingMode.VINYL)) {
             compose.runOnIdle { mode=visual;state=state.copy(positionMs=60_000) }
             compose.onNodeWithTag("cassette-time-position").assertTextEquals("1:00")
             compose.onNodeWithTag("cassette-progress").assertIsNotEnabled()
@@ -196,7 +196,7 @@ class Stage9bScreenshotTest {
     }
 
     @Test fun idleRestoreKeepsZeroProgressEvenWithRoomDurationAndStalePosition() {
-        var mode by mutableStateOf(NowPlayingMode.CASSETTE)
+        var mode by mutableStateOf(NowPlayingMode.CASSETTE_CLASSIC)
         var duration by mutableStateOf(0L)
         compose.setContent {
             key(mode,duration) {
@@ -207,7 +207,7 @@ class Stage9bScreenshotTest {
                 }
             }
         }
-        for (visual in listOf(NowPlayingMode.CASSETTE,NowPlayingMode.VINYL)) for (stored in listOf(0L,240_000L)) {
+        for (visual in listOf(NowPlayingMode.CASSETTE_CLASSIC,NowPlayingMode.VINYL)) for (stored in listOf(0L,240_000L)) {
             compose.runOnIdle { mode=visual;duration=stored }
             compose.onNodeWithTag("cassette-time-position").assertTextEquals("0:00")
             compose.onNodeWithTag("cassette-time-duration").assertTextEquals(if(stored>0)"4:00" else "--:--")
@@ -220,11 +220,11 @@ class Stage9bScreenshotTest {
     }
 
     @Test fun landscapeFont200CanScrollEveryTechnicalChipFullyIntoItsViewport() {
-        val scene=Scene(true,TitleKind.LONG,true,2f,false,NowPlayingMode.CASSETTE)
+        val scene=Scene(true,TitleKind.LONG,true,2f,false,NowPlayingMode.CASSETTE_CLASSIC)
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f,2f)) {
                 Box(Modifier.size(900.dp,360.dp).testTag(SCENE)) {
-                    CassettePlayerScreen(WalkmanTheme.TPS_L2,scene.state,CassetteActions(),Modifier.fillMaxSize())
+                    CassettePlayerScreen(WalkmanTheme.TPS_L2,scene.state,CassetteActions(),Modifier.fillMaxSize(),mode=scene.mode)
                 }
             }
         }
@@ -238,7 +238,7 @@ class Stage9bScreenshotTest {
     }
 
     @Test fun portraitFont200ReadyKeepsBottomControlsInsideTheInitialSafeViewport() {
-        var mode by mutableStateOf(NowPlayingMode.CASSETTE)
+        var mode by mutableStateOf(NowPlayingMode.CASSETTE_CLASSIC)
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f,2f)) {
                 key(mode) {
@@ -250,7 +250,7 @@ class Stage9bScreenshotTest {
                 }
             }
         }
-        for (visual in listOf(NowPlayingMode.CASSETTE,NowPlayingMode.VINYL)) {
+        for (visual in listOf(NowPlayingMode.CASSETTE_CLASSIC,NowPlayingMode.VINYL)) {
             compose.runOnIdle { mode=visual }
             val root=compose.onNodeWithTag(SCENE).getUnclippedBoundsInRoot()
             for(label in listOf("Phát","Bài trước","Bài tiếp","Hàng đợi","Cài đặt âm thanh","Chọn màu trình phát")) {
@@ -263,7 +263,7 @@ class Stage9bScreenshotTest {
     }
 
     @Test fun missingMetadataDoesNotLeaveAnEmptyBandBetweenArtworkAndSeek() {
-        var scene by mutableStateOf(Scene(false,TitleKind.RAW_FILE,false,1f,true,NowPlayingMode.CASSETTE))
+        var scene by mutableStateOf(Scene(false,TitleKind.RAW_FILE,false,1f,true,NowPlayingMode.CASSETTE_CLASSIC))
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f,scene.fontScale)) {
                 key(scene.id) {
@@ -273,7 +273,7 @@ class Stage9bScreenshotTest {
                 }
             }
         }
-        for (visual in listOf(NowPlayingMode.CASSETTE,NowPlayingMode.VINYL)) for(scale in listOf(1f,2f)) {
+        for (visual in listOf(NowPlayingMode.CASSETTE_CLASSIC,NowPlayingMode.VINYL)) for(scale in listOf(1f,2f)) {
             compose.runOnIdle { scene=scene.copy(mode=visual,fontScale=scale) }
             val art=compose.onNodeWithTag("cassette-art").getUnclippedBoundsInRoot()
             val seek=compose.onNodeWithTag("cassette-progress").getUnclippedBoundsInRoot()

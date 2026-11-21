@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -78,7 +79,7 @@ class CassetteStage9RenderTest {
                     Box(Modifier.fillMaxSize()) {
                         key(scene.id) {
                             Box(Modifier.size(scene.width.dp, scene.height.dp).testTag(SCENE)) {
-                                CassettePlayerScreen(WalkmanTheme.TPS_L2, scene.state, CassetteActions(), Modifier.fillMaxSize())
+                                ClassicCassetteForTest(WalkmanTheme.TPS_L2, scene.state, CassetteActions(), Modifier.fillMaxSize())
                             }
                         }
                     }
@@ -129,7 +130,7 @@ class CassetteStage9RenderTest {
             SideEffect { hostView=view }
             MaterialTheme(colorScheme=WalkmanTheme.TPS_L2.colors) {
                 Box(Modifier.size(scene.width.dp,scene.height.dp).testTag(SCENE)) {
-                    CassettePlayerScreen(WalkmanTheme.TPS_L2,scene.state,actions,Modifier.fillMaxSize())
+                    ClassicCassetteForTest(WalkmanTheme.TPS_L2,scene.state,actions,Modifier.fillMaxSize())
                 }
             }
         }
@@ -170,7 +171,7 @@ class CassetteStage9RenderTest {
                 MaterialTheme(colorScheme=WalkmanTheme.TPS_L2.colors) {
                     key(scene.id) {
                         Box(Modifier.size(scene.width.dp,scene.height.dp).testTag(SCENE)) {
-                            CassettePlayerScreen(WalkmanTheme.TPS_L2,scene.state,CassetteActions(toggle={toggles++},seek={sought=it}),Modifier.fillMaxSize())
+                            ClassicCassetteForTest(WalkmanTheme.TPS_L2,scene.state,CassetteActions(toggle={toggles++},seek={sought=it}),Modifier.fillMaxSize())
                         }
                     }
                 }
@@ -235,4 +236,14 @@ class CassetteStage9RenderTest {
         private const val SCENE="stage9-render-scene"
         private const val LONG_TITLE="Những ngày nắng rất khẽ trên miền ký ức — Đừng quên lời hẹn dưới cơn mưa cuối hạ của chúng mình"
     }
+}
+
+@Composable
+internal fun ClassicCassetteForTest(
+    theme: WalkmanTheme,
+    state: CassetteScreenState,
+    actions: CassetteActions,
+    modifier: Modifier,
+) {
+    CassettePlayerScreen(theme, state, actions, modifier, mode = NowPlayingMode.CASSETTE_CLASSIC)
 }

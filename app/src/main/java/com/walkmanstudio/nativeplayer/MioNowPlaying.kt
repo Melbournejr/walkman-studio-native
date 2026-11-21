@@ -103,28 +103,31 @@ internal fun MioNowPlaying(
                 }
             }
         }
+        val cover: @Composable () -> Unit = {
+            val frame = RoundedCornerShape(16.dp)
+            Box(Modifier.size(coverWidth).testTag("mio-cover").clip(frame).border(1.dp, colors.primary.copy(alpha = .45f), frame)) {
+                artwork(Modifier.matchParentSize())
+                if (highResolutionSource) Surface(
+                    Modifier.align(Alignment.TopStart).padding(14.dp), color = colors.background,
+                    shape = RoundedCornerShape(4.dp), border = BorderStroke(1.dp, colors.primary.copy(alpha = .8f)),
+                ) {
+                    Text("Hi-Res\nAUDIO", Modifier.padding(horizontal = 4.dp, vertical = 3.dp),
+                        color = colors.primary, style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 10.sp, lineHeight = 11.sp, letterSpacing = 0.sp))
+                }
+            }
+        }
         if (wide) {
             Row(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically) {
-                artwork(Modifier.size(coverWidth))
+                cover()
                 controls()
             }
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 28.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                val frame = RoundedCornerShape(16.dp)
-                Box(Modifier.size(coverWidth).testTag("mio-cover").clip(frame).border(1.dp, colors.primary.copy(alpha = .45f), frame)) {
-                    artwork(Modifier.matchParentSize())
-                    if (highResolutionSource) Surface(
-                        Modifier.align(Alignment.TopStart).padding(14.dp), color = colors.background,
-                        shape = RoundedCornerShape(4.dp), border = BorderStroke(1.dp, colors.primary.copy(alpha = .8f)),
-                    ) {
-                        Text("Hi-Res\nAUDIO", Modifier.padding(horizontal = 4.dp, vertical = 3.dp),
-                            color = colors.primary, style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 10.sp, lineHeight = 11.sp, letterSpacing = 0.sp))
-                    }
-                }
+                cover()
                 controls()
                 if (state.id != null) MioWaveFooter(Modifier.fillMaxWidth().height(84.dp).offset(y = (-14).dp))
             }

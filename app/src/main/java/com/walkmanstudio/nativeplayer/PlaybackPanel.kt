@@ -68,7 +68,11 @@ internal fun MioMiniPlayer(state: PlaybackUi, open: () -> Unit, toggle: () -> Un
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NowPlaying(model:PlaybackViewModel,artwork:Modifier,theme:WalkmanTheme,mode:NowPlayingMode,chooseTheme:(WalkmanTheme)->Unit,chooseMode:(NowPlayingMode)->Unit,favorite:(TrackEntity)->Unit,close:()->Unit) {
-    val colors = if (mode == NowPlayingMode.CLASSIC) MaterialTheme.colorScheme else theme.colors
+    val colors = when (mode) {
+        NowPlayingMode.CLASSIC -> MaterialTheme.colorScheme
+        NowPlayingMode.CASSETTE -> WalkmanTheme.MIO.colors
+        else -> theme.colors
+    }
     MaterialTheme(colorScheme = colors) { NowPlayingContent(model, artwork, theme, mode, chooseTheme, chooseMode, favorite, close) }
 }
 
@@ -103,7 +107,7 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
             NowPlayingMode.entries.forEach { choice ->
                 DropdownMenuItem(text = { Text(choice.label) }, onClick = { chooseMode(choice); displayMenu = false })
             }
-            if (mode != NowPlayingMode.CLASSIC) {
+            if (mode == NowPlayingMode.CASSETTE_CLASSIC || mode == NowPlayingMode.VINYL) {
                 HorizontalDivider()
                 WalkmanTheme.entries.forEach { choice ->
                     DropdownMenuItem(text = { Text(choice.model) }, onClick = { chooseTheme(choice); displayMenu = false })

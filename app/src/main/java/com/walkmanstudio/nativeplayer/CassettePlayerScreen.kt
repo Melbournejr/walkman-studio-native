@@ -59,8 +59,10 @@ fun CassettePlayerScreen(
     mode: NowPlayingMode = NowPlayingMode.CASSETTE,
     albumArt: @Composable (Modifier) -> Unit = {},
 ) {
-    if (mode == NowPlayingMode.CASSETTE) {
-        CassetteDeckScreen(theme, state, actions, modifier, visible)
+    if (mode.isCassette) {
+        val studio = mode == NowPlayingMode.CASSETTE
+        val deckTheme = if (studio) WalkmanTheme.MIO else theme
+        CassetteDeckScreen(deckTheme, state, actions, modifier, visible, studio)
         return
     }
     CompositionLocalProvider(LocalContentColor provides theme.ink) {
