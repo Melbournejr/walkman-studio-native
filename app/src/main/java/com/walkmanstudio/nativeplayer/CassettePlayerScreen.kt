@@ -46,6 +46,7 @@ data class CassetteActions(
     val shuffle: () -> Unit = {}, val repeat: () -> Unit = {}, val seek: (Long) -> Unit = {},
     val retry: () -> Unit = {}, val details: () -> Unit = {},
     val close: () -> Unit = {}, val palette: () -> Unit = {}, val stop: (() -> Unit)? = null,
+    val readPosition: (String) -> Long? = { null },
 )
 
 /** Insets are supplied by the containing Scaffold. Landscape never scrolls vertically:

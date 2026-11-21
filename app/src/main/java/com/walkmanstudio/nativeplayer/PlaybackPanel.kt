@@ -100,7 +100,9 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
         ))
     }
     val supportsSpectrum = mode == NowPlayingMode.CLASSIC || mode == NowPlayingMode.CASSETTE
-    val visible = !sheet && !details && !displayMenu
+    // The Studio reels remain visible behind the menu and the Audio Lab sheet.
+    val visible = if (mode == NowPlayingMode.CASSETTE) !(sheet && sheetMode == "queue")
+        else !sheet && !details && !displayMenu
     val nowPlayingActivity = androidx.activity.compose.LocalActivity.current
     SpectrumRefreshRate(nowPlayingActivity?.window, spectrum.fps, supportsSpectrum && visible && state.playing)
     fun selectSpectrum(options: MioSpectrumOptions) {
@@ -115,7 +117,7 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
         favorite = { current?.let(favorite) }, queue = { sheetMode = "queue"; sheet = true },
         sound = { sheetMode = "sound"; sheet = true }, shuffle = model::toggleShuffle,
         repeat = model::repeatOne, seek = model::seek, retry = model::retry, details = { details = true },
-        close = close, palette = { displayMenu = true }, stop = model::stopDeck,
+        close = close, palette = { displayMenu = true }, stop = model::stopDeck, readPosition = model::visualPosition,
     )
     val displayOptions: @Composable () -> Unit = {
         DropdownMenu(displayMenu, { displayMenu = false }) {

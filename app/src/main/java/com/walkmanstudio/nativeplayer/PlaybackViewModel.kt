@@ -100,6 +100,13 @@ class PlaybackViewModel(context: Context) : ViewModel() {
         invalidateUsbConfirmation()
         mutable.value = mutable.value.copy(connected = false)
     }
+    // UI-only clock for the tape animation, read on the controller's main looper.
+    internal fun visualPosition(trackId: String): Long? {
+        val player = controller ?: return null
+        if (!player.isConnected || player.currentMediaItem?.mediaId != trackId) return null
+        return player.currentPosition.coerceAtLeast(0L)
+    }
+
     private fun publish() {
         val player = controller ?: return
         if(!player.isConnected) {invalidateUsbConfirmation();return}

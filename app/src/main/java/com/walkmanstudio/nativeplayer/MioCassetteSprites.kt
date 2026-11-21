@@ -30,11 +30,16 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -43,6 +48,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -55,10 +63,10 @@ private val tapeBed = CassetteSprite(R.drawable.mio_cassette_tape_window_backgro
 private val leftReel = CassetteSprite(R.drawable.mio_cassette_reel_left, CassetteRect(140, 493, 234, 234))
 private val rightReel = CassetteSprite(R.drawable.mio_cassette_reel_right, CassetteRect(559, 493, 234, 234))
 // Optical centers measured at the spindle of each supplied 222 px sprite.
-private val leftPivot = TransformOrigin(128f / 222f, 114f / 222f)
-private val rightPivot = TransformOrigin(106f / 222f, 114f / 222f)
-private fun CassetteRect.axis(pivot: TransformOrigin) =
-    Offset(x + width * pivot.pivotFractionX, y + height * pivot.pivotFractionY)
+private val leftPivot = IntOffset(128, 114)
+private val rightPivot = IntOffset(106, 114)
+private fun CassetteRect.axis(pivot: IntOffset) =
+    Offset(x + width * pivot.x / 222f, y + height * pivot.y / 222f)
 private val leftAxis = leftReel.bounds.axis(leftPivot)
 private val rightAxis = rightReel.bounds.axis(rightPivot)
 private val label = CassetteSprite(R.drawable.mio_cassette_label_blank, CassetteRect(75, 371, 781, 111))
@@ -82,6 +90,7 @@ internal fun MioCassetteSprites(
 ) {
     val colors = MaterialTheme.colorScheme
     val title = state.title.ifBlank { "Chưa chọn bài" }
+    val radial = LocalSpectrumOptions.current.style == MioSpectrumStyle.RADIAL
     BoxWithConstraints(Modifier.fillMaxSize().mioGraphite().clipToBounds()) {
         // Keep the approved 390 dp portrait scale on large phones. On short
         // windows, scroll before shrinking the hardware below a usable width.
@@ -108,7 +117,8 @@ internal fun MioCassetteSprites(
                     if (latched) R.drawable.ic_pause else R.drawable.ic_play)
                 SpriteKey(nextKey, unit, "Bài tiếp", actions.next)
 
-                Row(CassetteRect(115, 975, 711, 100).place(unit), verticalAlignment = Alignment.CenterVertically) {
+                val displayWidth = if (radial) 510 else 711
+                Row(CassetteRect(115, 975, displayWidth, 100).place(unit), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         BasicText(title, style = MaterialTheme.typography.titleMedium.copy(color = colors.onSurface),
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -117,10 +127,13 @@ internal fun MioCassetteSprites(
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                             autoSize = TextAutoSize.StepBased(8.sp, 13.sp, 1.sp))
                     }
-                    MioSpectrum(state.playing && visible, Modifier.width(unit * 270).height(unit * 62))
+                    if (!radial) MioSpectrum(state.playing && visible, Modifier.width(unit * 324).height(unit * 91))
                 }
                 Spacer(CassetteRect(64, 1229, 800, 165).place(unit).testTag("mio-key-row"))
-                Box(Modifier.offset(unit * 110, unit * 1042).width(unit * 724)) { seek(false) }
+                Box(Modifier.offset(unit * 110, unit * 1042).width(unit * (if (radial) 480 else 724))) { seek(false) }
+                if (radial) {
+                    MioSpectrum(state.playing && visible, CassetteRect(639, 963, 189, 189).place(unit))
+                }
 
                 Row(Modifier.offset(unit * 78, unit * 1440).width(unit * 785), horizontalArrangement = Arrangement.SpaceBetween) {
                     MioCassetteUtilities(state, actions)
@@ -208,48 +221,54 @@ private fun MioTapeFace(state: CassetteScreenState, packs: State<TapePacks>, tap
     val labelInk = Color(0xFF35271B)
     val title = state.title.ifBlank { "Chưa chọn bài" }
     Sprite(tapeBed, tapeBed.bounds.place(unit, originY))
-    Canvas(tapeBed.bounds.place(unit, originY).clipToBounds()) {
+    val winding by remember(packs) {
+        derivedStateOf(structuralEqualityPolicy()) {
+            // Fractions below an artwork pixel are invisible, so the bed only redraws
+            // when the tape changes visibly. The spindle rotates independently each frame.
+            val frame = packs.value
+            (frame.left * 2).roundToInt() / 2f to (frame.right * 2).roundToInt() / 2f
+        }
+    }
+    Spacer(tapeBed.bounds.place(unit, originY).clipToBounds().drawWithCache {
         val scale = unit.toPx()
         fun local(point: Offset) = (point - Offset(tapeBed.bounds.x.toFloat(), tapeBed.bounds.y.toFloat())) * scale
-        val tape = packs.value
         val left = local(leftAxis)
         val right = local(rightAxis)
         val guides = listOf(local(Offset(444f, 719f)), local(Offset(501f, 719f)))
-        val leftRadius = tape.left * scale
-        val rightRadius = tape.right * scale
-        drawRect(Brush.verticalGradient(listOf(Color(0xEA090909), Color(0xAA17100D), Color(0xED090909))))
-        for ((center, radius) in listOf(left to leftRadius, right to rightRadius)) {
-            if (radius <= StudioTape.CORE * scale) continue
-            drawCircle(Brush.radialGradient(0f to Color(0xFF17110E), .72f to Color(0xFF623A25),
-                .95f to Color(0xFF3C2318), 1f to Color(0xFF251710), center = center, radius = radius), radius, center)
-            val core = StudioTape.CORE * scale
-            for (winding in 0..13) {
-                drawCircle(Color(0xFFBB8A62).copy(alpha = if (winding % 3 == 0) .32f else .14f),
-                    core + (radius - core) * winding / 13f, center, style = Stroke(.42.dp.toPx()))
+        val background = Brush.verticalGradient(listOf(Color(0xEA090909), Color(0xAA17100D), Color(0xED090909)))
+        val path = Path()
+        onDrawBehind {
+            val leftRadius = winding.first * scale
+            val rightRadius = winding.second * scale
+            drawRect(background)
+            for ((center, radius) in listOf(left to leftRadius, right to rightRadius)) {
+                if (radius <= StudioTape.CORE * scale) continue
+                drawCircle(Brush.radialGradient(0f to Color(0xFF17110E), .72f to Color(0xFF623A25),
+                    .95f to Color(0xFF3C2318), 1f to Color(0xFF251710), center = center, radius = radius), radius, center)
+                val core = StudioTape.CORE * scale
+                for (winding in 0..13) {
+                    drawCircle(Color(0xFFBB8A62).copy(alpha = if (winding % 3 == 0) .32f else .14f),
+                        core + (radius - core) * winding / 13f, center, style = Stroke(.42.dp.toPx()))
+                }
+            }
+            path.rewind()
+            path.apply {
+                val from = StudioTape.tangent(left, leftRadius, guides.first())
+                val to = StudioTape.tangent(right, rightRadius, guides.last())
+                moveTo(from.x, from.y)
+                for (guide in guides) lineTo(guide.x, guide.y)
+                lineTo(to.x, to.y)
+            }
+            drawPath(path, Color(0xFF170E0A), style = Stroke(4f * scale))
+            drawPath(path, Color(0xFFAD764B), style = Stroke(1.5f * scale))
+            for (guide in guides) {
+                drawCircle(Color(0xFF272320), 8f * scale, guide)
+                drawCircle(Color(0xFF8D8071), 4f * scale, guide)
             }
         }
-        val path = Path().apply {
-            val from = StudioTape.tangent(left, leftRadius, guides.first())
-            val to = StudioTape.tangent(right, rightRadius, guides.last())
-            moveTo(from.x, from.y)
-            for (guide in guides) lineTo(guide.x, guide.y)
-            lineTo(to.x, to.y)
-        }
-        drawPath(path, Color(0xFF170E0A), style = Stroke(4f * scale))
-        drawPath(path, Color(0xFFAD764B), style = Stroke(1.5f * scale))
-        for (guide in guides) {
-            drawCircle(Color(0xFF272320), 8f * scale, guide)
-            drawCircle(Color(0xFF8D8071), 4f * scale, guide)
-        }
-    }
-    Sprite(leftReel, leftReel.bounds.place(unit, originY).graphicsLayer {
-        transformOrigin = leftPivot
-        rotationZ = packs.value.leftAngle
     })
-    Sprite(rightReel, rightReel.bounds.place(unit, originY).graphicsLayer {
-        transformOrigin = rightPivot
-        rotationZ = packs.value.rightAngle
-    })
+    StudioReel(leftReel, leftPivot, leftAxis, unit, originY) { packs.value.leftAngle }
+    StudioReel(rightReel, rightPivot, rightAxis, unit, originY) { packs.value.rightAngle }
     Canvas(CassetteRect(89, 484, 768, 260).place(unit, originY)) {
         val rim = CornerRadius(5.dp.toPx())
         drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = .10f), Color.Transparent,
@@ -294,6 +313,39 @@ private fun MioTapeFace(state: CassetteScreenState, packs: State<TapePacks>, tap
         )
         Text("MIO STUDIO", color = colors.primary, style = MaterialTheme.typography.labelSmall, maxLines = 1)
     }
+}
+
+@Composable
+private fun StudioReel(sprite: CassetteSprite, pivot: IntOffset, axis: Offset,
+    unit: Dp, originY: Int, angle: () -> Float) {
+    val reel = ImageBitmap.imageResource(sprite.image)
+    val core = StudioTape.CORE
+    val crop = 88
+    Spacer(Modifier.offset(unit * (axis.x - core), unit * (axis.y - originY - core))
+        .size(unit * core * 2f).drawWithCache {
+            val center = Offset(size.width / 2, size.height / 2)
+            val radius = (size.minDimension / 2).coerceAtLeast(1f)
+            val rotor = radius * .85f
+            val clip = Path().apply {
+                addOval(androidx.compose.ui.geometry.Rect(center - Offset(rotor, rotor), center + Offset(rotor, rotor)))
+            }
+            val rim = Brush.radialGradient(
+                .70f to Color(0xFF151210), .86f to Color(0xFF4B4136), .94f to Color(0xFF867663),
+                1f to Color(0xFF201C17), center = center, radius = radius,
+            )
+            val dst = IntOffset((center.x - rotor).roundToInt(), (center.y - rotor).roundToInt())
+            val dstSize = IntSize((rotor * 2).roundToInt(), (rotor * 2).roundToInt())
+            onDrawBehind {
+                drawCircle(rim, radius, center)
+                clipPath(clip) {
+                    rotate(angle(), center) {
+                        drawImage(reel, srcOffset = IntOffset(pivot.x - crop, pivot.y - crop),
+                            srcSize = IntSize(crop * 2, crop * 2), dstOffset = dst, dstSize = dstSize,
+                            filterQuality = FilterQuality.Medium)
+                    }
+                }
+            }
+        })
 }
 
 @Composable

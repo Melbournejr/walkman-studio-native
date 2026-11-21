@@ -345,6 +345,40 @@ class MioScreensTest {
         savePreview("retro-landscape", view)
     }
 
+    @Test fun studioTapeReadsTheFrameClockWithoutWaitingForUiPosition() {
+        compose.mainClock.autoAdvance = false
+        var current = 1000L
+        lateinit var tape: State<TapePacks>
+        compose.setContent {
+            tape = rememberStudioTape("track", 1000L, 240000L, running = true) { current }
+        }
+        repeat(3) { compose.mainClock.advanceTimeByFrame() }
+        assertEquals(StudioTape.packs(1000.0, 240000L), tape.value)
+        current = 1500L
+        repeat(3) { compose.mainClock.advanceTimeByFrame() }
+        assertEquals(StudioTape.packs(1500.0, 240000L), tape.value)
+    }
+
+    @Test fun portraitRadialHasItsOwnSquareClearOfTheSeekSlider() {
+        lateinit var view: View
+        compose.setContent {
+            view = LocalView.current
+            StudioTheme("dark") {
+                CompositionLocalProvider(LocalSpectrumOptions provides MioSpectrumOptions(MioSpectrumStyle.RADIAL)) {
+                    Surface(Modifier.size(390.dp, 844.dp).testTag("mio-preview")) {
+                        CassettePlayerScreen(WalkmanTheme.MIO, CassetteScreenState(title = "Mưa chiều"), CassetteActions())
+                    }
+                }
+            }
+        }
+        val spectrum = compose.onNodeWithContentDescription("Phổ tần âm nhạc").getUnclippedBoundsInRoot()
+        val seek = compose.onNodeWithTag("cassette-progress").getUnclippedBoundsInRoot()
+        assertTrue((spectrum.bottom - spectrum.top).value >= 70f)
+        assertEquals((spectrum.right - spectrum.left).value, (spectrum.bottom - spectrum.top).value, 1f)
+        savePreview("retro-radial", view)
+        assertTrue("Seek ${seek.right} should end before spectrum ${spectrum.left}", seek.right < spectrum.left)
+    }
+
     @Test fun compactPlayerKeepsActionsAtLargeFontWithMissingArtwork() {
         compose.setContent {
             val deviceDensity = androidx.compose.ui.platform.LocalDensity.current

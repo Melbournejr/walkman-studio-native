@@ -145,8 +145,8 @@ internal fun CassetteDeckScreen(
             BoxWithConstraints(modifier.fillMaxSize().background(theme.body).testTag("cassette-player")) {
                 val viewportHeight = maxHeight
                 if (studio) {
-                    val packs = rememberStudioTape(state.trackId ?: state.title, position,
-                        if (known) state.durationMs else 0L, state.playing && animations && dragging == null && preview == null)
+                    val packs = rememberStudioTape(state.trackId, position, if (known) state.durationMs else 0L,
+                        state.playing && animations && dragging == null && preview == null, actions.readPosition)
                     MioCassetteSprites(state, actions, packs, deckSeek, seek, visible)
                 } else if (maxWidth > maxHeight) {
                     // Landscape is a full-width instrument panel. Its tape artwork is

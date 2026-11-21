@@ -113,12 +113,17 @@ internal fun MioSpectrum(playing: Boolean, modifier: Modifier = Modifier) {
         val motion = rendered
         val levels = motion.levels
         if (options.style == MioSpectrumStyle.RADIAL) {
-            val radius = size.minDimension * .37f
+            val diameter = size.minDimension
+            val radius = diameter * .395f
+            val stroke = (diameter * .014f).coerceIn(1.25.dp.toPx(), 4.dp.toPx())
+            drawCircle(accent.copy(alpha = .25f), (radius - stroke * 1.5f).coerceAtLeast(0f),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke * .45f))
             for ((index, direction) in directions.withIndex()) {
+                val intensity = levels[index]
                 val start = center + direction * radius
-                val end = start + direction * (size.minDimension * .12f * levels[index])
-                drawLine(accent.copy(alpha = .26f + .74f * levels[index]), start, end,
-                    strokeWidth = minOf(2.dp.toPx(), size.minDimension / 24f), cap = StrokeCap.Round)
+                val end = start + direction * (diameter * (.014f + .074f * intensity))
+                drawLine(accent.copy(alpha = .45f + .55f * intensity), start, end,
+                    strokeWidth = stroke, cap = StrokeCap.Round)
             }
         } else {
             val mirror = options.style == MioSpectrumStyle.MIRROR

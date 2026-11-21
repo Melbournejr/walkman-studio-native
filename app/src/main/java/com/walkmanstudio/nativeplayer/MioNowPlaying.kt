@@ -128,7 +128,7 @@ internal fun MioNowPlaying(
                 cover()
                 Column(Modifier.width(coverWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     controls()
-                    if (showSpectrum && !radial) MioSpectrum(true, Modifier.fillMaxWidth().height(42.dp))
+                    if (showSpectrum && !radial) MioSpectrum(true, Modifier.fillMaxWidth().height(56.dp))
                 }
             }
         } else {
@@ -139,7 +139,7 @@ internal fun MioNowPlaying(
                 if (state.id != null) {
                     Box(Modifier.fillMaxWidth().height(76.dp).offset(y = (-14).dp), contentAlignment = Alignment.Center) {
                         MioWaveFooter(Modifier.matchParentSize())
-                        if (showSpectrum && !radial) MioSpectrum(true, Modifier.width(coverWidth).height(48.dp))
+                        if (showSpectrum && !radial) MioSpectrum(true, Modifier.width(coverWidth).height(62.dp))
                     }
                 }
             }
