@@ -88,6 +88,26 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
     var sheet by remember { mutableStateOf(false) }
     var sheetMode by remember { mutableStateOf("sound") }
     var details by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val preferences = remember(context) {
+        context.getSharedPreferences("appearance", android.content.Context.MODE_PRIVATE)
+    }
+    var spectrum by remember(preferences) {
+        val savedStyle = preferences.getString("spectrumStyle", null)
+        mutableStateOf(MioSpectrumOptions(
+            MioSpectrumStyle.entries.firstOrNull { it.name == savedStyle } ?: MioSpectrumStyle.BARS,
+            if (preferences.getInt("spectrumFps", 60) == 120) 120 else 60,
+        ))
+    }
+    val supportsSpectrum = mode == NowPlayingMode.CLASSIC || mode == NowPlayingMode.CASSETTE
+    val visible = !sheet && !details && !displayMenu
+    val nowPlayingActivity = androidx.activity.compose.LocalActivity.current
+    SpectrumRefreshRate(nowPlayingActivity?.window, spectrum.fps, supportsSpectrum && visible && state.playing)
+    fun selectSpectrum(options: MioSpectrumOptions) {
+        spectrum = options
+        preferences.edit().putString("spectrumStyle", options.style.name).putInt("spectrumFps", options.fps).apply()
+        displayMenu = false
+    }
     val current = track?.takeIf { it.id.toString() == state.id }
     BackHandler(onBack = close)
     val actions = CassetteActions(
@@ -106,6 +126,21 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
             }
             NowPlayingMode.entries.forEach { choice ->
                 DropdownMenuItem(text = { Text(choice.label) }, onClick = { chooseMode(choice); displayMenu = false })
+            }
+            if (supportsSpectrum) {
+                HorizontalDivider()
+                Text("Music Visualizer", Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.labelMedium)
+                MioSpectrumStyle.entries.forEach { style ->
+                    DropdownMenuItem(text = { Text(style.label) },
+                        trailingIcon = { if (spectrum.style == style) Text("✓") },
+                        onClick = { selectSpectrum(spectrum.copy(style = style)) })
+                }
+                listOf(60, 120).forEach { fps ->
+                    DropdownMenuItem(text = { Text("$fps FPS") },
+                        trailingIcon = { if (spectrum.fps == fps) Text("✓") },
+                        onClick = { selectSpectrum(spectrum.copy(fps = fps)) })
+                }
             }
             if (mode == NowPlayingMode.CASSETTE_CLASSIC || mode == NowPlayingMode.VINYL) {
                 HorizontalDivider()
@@ -128,23 +163,25 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
     }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             val specs = CassetteSignal.chips(signal, dsp.sourceDirect, !dsp.sourceDirect)
-            if (mode == NowPlayingMode.CLASSIC) {
-                MioNowPlaying(state, specs, actions,
-                    highResolutionSource = CassetteSignal.isHighResolutionSource(signal)) {
-                    modifier -> TrackCover(track, artwork.then(modifier), large = true)
+            CompositionLocalProvider(LocalSpectrumOptions provides spectrum) {
+                if (mode == NowPlayingMode.CLASSIC) {
+                    MioNowPlaying(state, specs, actions,
+                        highResolutionSource = CassetteSignal.isHighResolutionSource(signal), visualizerVisible = visible) {
+                        modifier -> TrackCover(track, artwork.then(modifier), large = true)
+                    }
+                } else {
+                    CassettePlayerScreen(theme, CassetteScreenState(
+                        title = state.title, artist = state.artist, album = state.album,
+                        positionMs = state.positionMs, durationMs = state.durationMs, playing = state.playing,
+                        requested = state.requested, playbackState = state.playbackState, queueIndex = state.queueIndex,
+                        queueCount = state.queueCount, shuffled = state.shuffled, repeatOne = state.repeatOne,
+                        favorite = current?.isFavorite == true, specs = specs, error = state.error,
+                        seekEnabled = state.seekEnabled, timelineKnown = state.timelineKnown, trackId = state.id,
+                    ), actions, visible = visible, mode = mode) { modifier ->
+                        TrackCover(track, modifier, large = true)
+                    }
+                    Box(Modifier.align(Alignment.TopEnd)) { displayOptions() }
                 }
-            } else {
-                CassettePlayerScreen(theme, CassetteScreenState(
-                    title = state.title, artist = state.artist, album = state.album,
-                    positionMs = state.positionMs, durationMs = state.durationMs, playing = state.playing,
-                    requested = state.requested, playbackState = state.playbackState, queueIndex = state.queueIndex,
-                    queueCount = state.queueCount, shuffled = state.shuffled, repeatOne = state.repeatOne,
-                    favorite = current?.isFavorite == true, specs = specs, error = state.error,
-                    seekEnabled = state.seekEnabled, timelineKnown = state.timelineKnown,
-                ), actions, visible = !sheet && !details && !displayMenu, mode = mode) { modifier ->
-                    TrackCover(track, modifier, large = true)
-                }
-                Box(Modifier.align(Alignment.TopEnd)) { displayOptions() }
             }
         }
     }

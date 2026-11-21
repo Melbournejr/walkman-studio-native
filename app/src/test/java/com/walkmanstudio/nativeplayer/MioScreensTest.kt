@@ -271,21 +271,21 @@ class MioScreensTest {
     }
 
     @Test fun spriteReelsMoveIndependentlyOfHousing() {
-        val angle = mutableDoubleStateOf(0.0)
+        val packs = mutableStateOf(StudioTape.packs(120000.0, 240000))
         lateinit var view: View
         compose.setContent {
             view = LocalView.current
             StudioTheme("dark") {
                 Surface(Modifier.size(390.dp, 844.dp).testTag("mio-preview")) {
                     MioCassetteSprites(CassetteScreenState(title = "Bên kia mùa mưa"), CassetteActions(),
-                        angle, Modifier) {}
+                        packs, Modifier, {})
                 }
             }
         }
         fun patch(image: Bitmap, x: Int, y: Int): List<Int> =
             (0 until 22).flatMap { dy -> (0 until 22).map { dx -> image.getPixel(x + dx, y + dy) } }
         val frameBefore = HostViewCapture.capture(compose, "mio-preview", view)
-        compose.runOnIdle { angle.doubleValue = 42.0 }
+        compose.runOnIdle { packs.value = packs.value.copy(leftAngle = 42f, rightAngle = 105f) }
         val frameAfter = HostViewCapture.capture(compose, "mio-preview", view)
         assertNotEquals(patch(frameBefore, 95, 295), patch(frameAfter, 95, 295))
         assertNotEquals(patch(frameBefore, 260, 295), patch(frameAfter, 260, 295))

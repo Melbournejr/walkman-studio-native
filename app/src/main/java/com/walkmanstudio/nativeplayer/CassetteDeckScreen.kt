@@ -77,7 +77,7 @@ internal fun CassetteDeckScreen(
             val attribution = listOf(NowPlayingText.sanitize(state.artist), NowPlayingText.sanitize(state.album))
                 .filter(String::isNotBlank).joinToString(" · ")
             val animations = transportAnimationAllowed(true, false) && visible
-            val rotation = cassetteDeckRotation(state.playing, dragging != null || preview != null, visible)
+            val rotation = if (studio) null else cassetteDeckRotation(state.playing, dragging != null || preview != null, visible)
             val latestProgress by rememberUpdatedState(sourceProgress)
             val latestSeek by rememberUpdatedState(actions.seek)
             val deckSeek = Modifier.semantics {
@@ -124,7 +124,7 @@ internal fun CassetteDeckScreen(
                                     DeckQueueIndex(theme, state)
                                 }
                                 Box(Modifier.size(tapeWidth, tapeHeight).testTag("cassette-tape")) {
-                                    CassetteFace(theme, state.title, state.artist, progress, position, rotation, known)
+                                    CassetteFace(theme, state.title, state.artist, progress, position, checkNotNull(rotation), known)
                                 }
                                 Spacer(Modifier.height(6.dp))
                                 MechanicalTransport(theme, state.requested, state.playbackState, animations,
@@ -145,7 +145,9 @@ internal fun CassetteDeckScreen(
             BoxWithConstraints(modifier.fillMaxSize().background(theme.body).testTag("cassette-player")) {
                 val viewportHeight = maxHeight
                 if (studio) {
-                    MioCassetteSprites(state, actions, rotation, deckSeek, seek)
+                    val packs = rememberStudioTape(state.trackId ?: state.title, position,
+                        if (known) state.durationMs else 0L, state.playing && animations && dragging == null && preview == null)
+                    MioCassetteSprites(state, actions, packs, deckSeek, seek, visible)
                 } else if (maxWidth > maxHeight) {
                     // Landscape is a full-width instrument panel. Its tape artwork is
                     // redrawn for this viewport; the portrait cassette is never stretched.
@@ -154,7 +156,7 @@ internal fun CassetteDeckScreen(
                             Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)
                                 .testTag("cassette-content"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Box(Modifier.fillMaxWidth().weight(1f).testTag("cassette-tape")) {
-                                    LandscapeCassetteFace(theme, progress, position, rotation, known)
+                                    LandscapeCassetteFace(theme, progress, position, checkNotNull(rotation), known)
                                 }
                                 Row(Modifier.fillMaxWidth().heightIn(min = 64.dp),
                                     verticalAlignment = Alignment.CenterVertically,

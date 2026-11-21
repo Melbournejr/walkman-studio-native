@@ -54,6 +54,13 @@ private val housing = CassetteSprite(R.drawable.mio_cassette_housing_clean_plate
 private val tapeBed = CassetteSprite(R.drawable.mio_cassette_tape_window_background, CassetteRect(82, 484, 779, 253))
 private val leftReel = CassetteSprite(R.drawable.mio_cassette_reel_left, CassetteRect(140, 493, 234, 234))
 private val rightReel = CassetteSprite(R.drawable.mio_cassette_reel_right, CassetteRect(559, 493, 234, 234))
+// Optical centers measured at the spindle of each supplied 222 px sprite.
+private val leftPivot = TransformOrigin(128f / 222f, 114f / 222f)
+private val rightPivot = TransformOrigin(106f / 222f, 114f / 222f)
+private fun CassetteRect.axis(pivot: TransformOrigin) =
+    Offset(x + width * pivot.pivotFractionX, y + height * pivot.pivotFractionY)
+private val leftAxis = leftReel.bounds.axis(leftPivot)
+private val rightAxis = rightReel.bounds.axis(rightPivot)
 private val label = CassetteSprite(R.drawable.mio_cassette_label_blank, CassetteRect(75, 371, 781, 111))
 private val frame = CassetteSprite(R.drawable.mio_cassette_window_frame, CassetteRect(52, 323, 843, 553))
 private val previousKey = CassetteSprite(R.drawable.mio_cassette_key_previous, CassetteRect(78, 1229, 181, 165))
@@ -70,8 +77,8 @@ private fun Sprite(sprite: CassetteSprite, modifier: Modifier) {
 
 @Composable
 internal fun MioCassetteSprites(
-    state: CassetteScreenState, actions: CassetteActions, rotation: State<Double>,
-    tapeSeek: Modifier, seek: @Composable (Boolean) -> Unit,
+    state: CassetteScreenState, actions: CassetteActions, packs: State<TapePacks>,
+    tapeSeek: Modifier, seek: @Composable (Boolean) -> Unit, visible: Boolean = true,
 ) {
     val colors = MaterialTheme.colorScheme
     val title = state.title.ifBlank { "Chưa chọn bài" }
@@ -79,7 +86,7 @@ internal fun MioCassetteSprites(
         // Keep the approved 390 dp portrait scale on large phones. On short
         // windows, scroll before shrinking the hardware below a usable width.
         if (maxWidth > maxHeight) {
-            MioLandscapeCassette(state, actions, rotation, tapeSeek, seek)
+            MioLandscapeCassette(state, actions, packs, tapeSeek, seek, visible)
             return@BoxWithConstraints
         }
         val canvasWidth = minOf(maxWidth * 1.018f, 390.dp * 1.018f,
@@ -92,7 +99,7 @@ internal fun MioCassetteSprites(
             Box(Modifier.requiredWidth(canvasWidth).height(canvasHeight)) {
                 Sprite(housing, housing.bounds.place(unit))
                 Spacer(CassetteRect(20, 154, 900, 1449).place(unit).testTag("mio-case"))
-                MioTapeFace(state, rotation, tapeSeek, unit, originY = 0)
+                MioTapeFace(state, packs, tapeSeek, unit, originY = 0)
 
                 val latched = CassetteKeyModel.latched(state.requested, state.playbackState)
                 SpriteKey(previousKey, unit, "Bài trước", actions.previous)
@@ -110,7 +117,7 @@ internal fun MioCassetteSprites(
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                             autoSize = TextAutoSize.StepBased(8.sp, 13.sp, 1.sp))
                     }
-                    MioSpectrum(state.playing, Modifier.width(unit * 270).height(unit * 62))
+                    MioSpectrum(state.playing && visible, Modifier.width(unit * 270).height(unit * 62))
                 }
                 Spacer(CassetteRect(64, 1229, 800, 165).place(unit).testTag("mio-key-row"))
                 Box(Modifier.offset(unit * 110, unit * 1042).width(unit * 724)) { seek(false) }
@@ -136,8 +143,8 @@ internal fun MioCassetteSprites(
 }
 
 @Composable
-private fun MioLandscapeCassette(state: CassetteScreenState, actions: CassetteActions, rotation: State<Double>,
-    tapeSeek: Modifier, seek: @Composable (Boolean) -> Unit) {
+private fun MioLandscapeCassette(state: CassetteScreenState, actions: CassetteActions, packs: State<TapePacks>,
+    tapeSeek: Modifier, seek: @Composable (Boolean) -> Unit, visible: Boolean) {
     val colors = MaterialTheme.colorScheme
     val latched = CassetteKeyModel.latched(state.requested, state.playbackState)
     Column(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp).testTag("mio-landscape-deck"),
@@ -157,7 +164,7 @@ private fun MioLandscapeCassette(state: CassetteScreenState, actions: CassetteAc
             BoxWithConstraints(Modifier.weight(1.45f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                 val unit = minOf(maxWidth / 941, maxHeight / 553)
                 Box(Modifier.size(unit * 941, unit * 553).clipToBounds()) {
-                    MioTapeFace(state, rotation, tapeSeek, unit, originY = 323)
+                    MioTapeFace(state, packs, tapeSeek, unit, originY = 323)
                 }
             }
             Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(10.dp))
@@ -168,7 +175,7 @@ private fun MioLandscapeCassette(state: CassetteScreenState, actions: CassetteAc
                 Text(listOf(state.artist, state.album).filter(String::isNotBlank).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
-                MioSpectrum(state.playing, Modifier.weight(1f).fillMaxWidth())
+                MioSpectrum(state.playing && visible, Modifier.weight(1f).fillMaxWidth())
                 seek(true)
             }
         }
@@ -195,36 +202,53 @@ private fun MioCassetteUtilities(state: CassetteScreenState, actions: CassetteAc
 }
 
 @Composable
-private fun MioTapeFace(state: CassetteScreenState, rotation: State<Double>, tapeSeek: Modifier,
+private fun MioTapeFace(state: CassetteScreenState, packs: State<TapePacks>, tapeSeek: Modifier,
     unit: Dp, originY: Int) {
     val colors = MaterialTheme.colorScheme
     val labelInk = Color(0xFF35271B)
     val title = state.title.ifBlank { "Chưa chọn bài" }
-    // The forged tape texture stays still while both exposed hubs turn.
     Sprite(tapeBed, tapeBed.bounds.place(unit, originY))
     Canvas(tapeBed.bounds.place(unit, originY).clipToBounds()) {
-        drawRect(Brush.verticalGradient(listOf(Color(0xE60A0909), Color(0xA6160D0B), Color(0xDF090909))))
-        for ((index, x) in listOf(.225f, .763f).withIndex()) {
-            val center = Offset(size.width * x, size.height * .50f)
-            val radius = size.height * if (index == 0) .73f else .76f
-            drawCircle(Brush.radialGradient(0f to Color(0xFF12100E),
-                .65f to Color(0xFF4F2717), .90f to Color(0xFF2B1B15), 1f to Color.Transparent,
-                center = center, radius = radius), radius, center)
-            repeat(14) { winding ->
-                drawCircle(Color(0xFFAD7850).copy(alpha = if (winding % 3 == 0) .24f else .10f),
-                    radius * (.55f + winding * .030f), center, style = Stroke(.48.dp.toPx()))
+        val scale = unit.toPx()
+        fun local(point: Offset) = (point - Offset(tapeBed.bounds.x.toFloat(), tapeBed.bounds.y.toFloat())) * scale
+        val tape = packs.value
+        val left = local(leftAxis)
+        val right = local(rightAxis)
+        val guides = listOf(local(Offset(444f, 719f)), local(Offset(501f, 719f)))
+        val leftRadius = tape.left * scale
+        val rightRadius = tape.right * scale
+        drawRect(Brush.verticalGradient(listOf(Color(0xEA090909), Color(0xAA17100D), Color(0xED090909))))
+        for ((center, radius) in listOf(left to leftRadius, right to rightRadius)) {
+            if (radius <= StudioTape.CORE * scale) continue
+            drawCircle(Brush.radialGradient(0f to Color(0xFF17110E), .72f to Color(0xFF623A25),
+                .95f to Color(0xFF3C2318), 1f to Color(0xFF251710), center = center, radius = radius), radius, center)
+            val core = StudioTape.CORE * scale
+            for (winding in 0..13) {
+                drawCircle(Color(0xFFBB8A62).copy(alpha = if (winding % 3 == 0) .32f else .14f),
+                    core + (radius - core) * winding / 13f, center, style = Stroke(.42.dp.toPx()))
             }
         }
-        drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .34f), Color.Transparent,
-            Color.Transparent, Color.Black.copy(alpha = .38f))))
+        val path = Path().apply {
+            val from = StudioTape.tangent(left, leftRadius, guides.first())
+            val to = StudioTape.tangent(right, rightRadius, guides.last())
+            moveTo(from.x, from.y)
+            for (guide in guides) lineTo(guide.x, guide.y)
+            lineTo(to.x, to.y)
+        }
+        drawPath(path, Color(0xFF170E0A), style = Stroke(4f * scale))
+        drawPath(path, Color(0xFFAD764B), style = Stroke(1.5f * scale))
+        for (guide in guides) {
+            drawCircle(Color(0xFF272320), 8f * scale, guide)
+            drawCircle(Color(0xFF8D8071), 4f * scale, guide)
+        }
     }
     Sprite(leftReel, leftReel.bounds.place(unit, originY).graphicsLayer {
-        transformOrigin = TransformOrigin(.5f, .5f)
-        rotationZ = (-rotation.value * .92 % 360).toFloat()
+        transformOrigin = leftPivot
+        rotationZ = packs.value.leftAngle
     })
     Sprite(rightReel, rightReel.bounds.place(unit, originY).graphicsLayer {
-        transformOrigin = TransformOrigin(.5f, .5f)
-        rotationZ = (-rotation.value * 1.14 % 360).toFloat()
+        transformOrigin = rightPivot
+        rotationZ = packs.value.rightAngle
     })
     Canvas(CassetteRect(89, 484, 768, 260).place(unit, originY)) {
         val rim = CornerRadius(5.dp.toPx())

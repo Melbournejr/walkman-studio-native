@@ -38,6 +38,7 @@ data class CassetteScreenState(
     val favorite: Boolean = false, val specs: List<String> = emptyList(),
     val error: String? = null, val seekEnabled: Boolean = true, val timelineKnown: Boolean = durationMs > 0,
     val playbackState: Int = if (playing || requested) androidx.media3.common.Player.STATE_READY else androidx.media3.common.Player.STATE_IDLE,
+    val trackId: String? = null,
 )
 data class CassetteActions(
     val toggle: () -> Unit = {}, val previous: () -> Unit = {}, val next: () -> Unit = {},
