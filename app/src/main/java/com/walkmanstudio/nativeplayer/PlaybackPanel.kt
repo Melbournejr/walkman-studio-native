@@ -43,14 +43,14 @@ fun PlaybackPanel(model: PlaybackViewModel, artwork: Modifier = Modifier, open: 
 internal fun MioMiniPlayer(state: PlaybackUi, open: () -> Unit, toggle: () -> Unit,
     next: () -> Unit, cover: @Composable (Modifier) -> Unit) {
     if (state.id == null) return
-    Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp).testTag("mio-mini-player"),
-        shape = RoundedCornerShape(11.dp),
+    Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp).testTag("mio-mini-player"),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .48f))) {
         Column {
-            Row(Modifier.fillMaxWidth().heightIn(min = 58.dp).clickable(onClickLabel = "Mở Đang phát", onClick = open).padding(start = 10.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                cover(Modifier.size(42.dp))
-                Spacer(Modifier.width(12.dp))
+            Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(onClickLabel = "Mở Đang phát", onClick = open).padding(start = 18.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                cover(Modifier.size(44.dp))
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(state.title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (state.artist.isNotBlank()) Text(state.artist, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)

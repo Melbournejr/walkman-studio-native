@@ -130,7 +130,7 @@ class MioScreensTest {
                                         MioAlbumRow { column, modifier ->
                                             val index = row * 2 + column
                                             val (title, artist) = fixtureAlbums[index]
-                                            Box(modifier) { MioAlbumTile(title, artist, {}) { ReferenceCover("album-$index", it) } }
+                                            Box(modifier) { MioAlbumTile(title, artist, mioAlbumArtworkRatio(row), {}, {}) { ReferenceCover("album-$index", it) } }
                                         }
                                     }
                                 }

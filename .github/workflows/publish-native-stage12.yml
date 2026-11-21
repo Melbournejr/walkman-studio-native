@@ -48,7 +48,7 @@ jobs:
           source_commit="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" | jq -er \
             --arg repo "$GITHUB_REPOSITORY" --argjson workflow_id "$workflow_id" '
               select(.workflow_id == $workflow_id
-                and .event == "workflow_dispatch"
+                and (.event == "workflow_dispatch" or .event == "push")
                 and .head_branch == "main"
                 and .head_repository.full_name == $repo
                 and .conclusion == "success")

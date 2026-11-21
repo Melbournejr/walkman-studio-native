@@ -1,6 +1,9 @@
 name: Build and sign Walkman Studio Native production release
 
 on:
+  push:
+    branches: [main]
+    paths: [release/production.properties]
   workflow_dispatch:
 
 permissions:

@@ -118,10 +118,11 @@ internal fun MioNowPlaying(
                     artwork(Modifier.matchParentSize())
                     if (highResolutionSource) Surface(
                         Modifier.align(Alignment.TopStart).padding(14.dp), color = colors.background,
-                        shape = RoundedCornerShape(4.dp), border = BorderStroke(1.dp, colors.primary),
+                        shape = RoundedCornerShape(4.dp), border = BorderStroke(1.dp, colors.primary.copy(alpha = .8f)),
                     ) {
-                        Text("Hi-Res\nAUDIO", Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                            color = colors.primary, style = MaterialTheme.typography.labelSmall)
+                        Text("Hi-Res\nAUDIO", Modifier.padding(horizontal = 4.dp, vertical = 3.dp),
+                            color = colors.primary, style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 10.sp, lineHeight = 11.sp, letterSpacing = 0.sp))
                     }
                 }
                 controls()

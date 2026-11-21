@@ -144,6 +144,7 @@ internal fun MioCassetteSprites(
                             style = MaterialTheme.typography.titleLarge.copy(color = labelInk, fontFamily = FontFamily.Cursive, fontStyle = FontStyle.Normal, fontWeight = FontWeight.Normal),
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                             autoSize = TextAutoSize.StepBased(11.sp, 28.sp, 1.sp))
+                        VerticalDivider(Modifier.height(unit * 48), color = labelInk.copy(alpha = .35f))
                         Text("C-60", style = MaterialTheme.typography.titleMedium, color = labelInk, maxLines = 1)
                     }
                 }
@@ -151,6 +152,10 @@ internal fun MioCassetteSprites(
                 Row(CassetteRect(137, 777, 673, 55).place(unit), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("TYPE I / NORMAL", color = colors.primary, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    HorizontalDivider(
+                        Modifier.weight(1f).padding(horizontal = 7.dp),
+                        color = colors.primary.copy(alpha = .5f),
+                    )
                     Text("MIO STUDIO", color = colors.primary, style = MaterialTheme.typography.labelSmall, maxLines = 1)
                 }
 

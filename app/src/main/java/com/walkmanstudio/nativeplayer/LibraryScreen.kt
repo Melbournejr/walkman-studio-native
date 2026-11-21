@@ -156,7 +156,11 @@ fun LibraryScreen(model: LibraryViewModel, playback: PlaybackViewModel, updates:
                                     Box(modifier) {
                                         val index = row * 2 + column
                                         if (index < albums.itemCount) albums[index]?.let { album ->
-                                            MioAlbumTile(album.album, album.artist, { model.openAlbum(album) }) { cover ->
+                                            MioAlbumTile(
+                                                album.album, album.artist, mioAlbumArtworkRatio(row),
+                                                open = { model.openAlbum(album) },
+                                                play = { playback.playSelection(TrackFilter(album = album.album, albumArtist = album.artist)) },
+                                            ) { cover ->
                                                 AlbumCover(album.coverKey, "${album.artist}|${album.album}", cover, large = true)
                                             }
                                         }
@@ -243,8 +247,8 @@ internal fun MioLibraryTabs(active: String, select: (String) -> Unit) {
 
 @Composable
 internal fun MioAlbumRow(tile: @Composable (Int, Modifier) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 25.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         repeat(2) { tile(it, Modifier.weight(1f)) }
     }
 }

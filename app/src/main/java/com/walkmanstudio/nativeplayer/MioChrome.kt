@@ -12,6 +12,10 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -127,13 +131,44 @@ internal fun MioPanelRow(icon: Int, title: String, summary: String, minHeight: D
 }
 
 @Composable
-internal fun MioAlbumTile(title: String, artist: String, open: () -> Unit, art: @Composable (Modifier) -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = "Mở album", onClick = open),
-        verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        art(Modifier.fillMaxWidth().aspectRatio(1f).testTag("mio-album-cover"))
-        Text(title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal,
-            fontSize = 15.sp, lineHeight = 18.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (artist.isNotBlank()) Text(artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+internal fun MioAlbumTile(
+    title: String,
+    artist: String,
+    artworkRatio: Float,
+    open: () -> Unit,
+    play: () -> Unit,
+    art: @Composable (Modifier) -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(12.dp)
+    Column(Modifier.fillMaxWidth()) {
+        art(Modifier.fillMaxWidth().aspectRatio(artworkRatio).clip(shape)
+            .clickable(onClickLabel = "Mở album", onClick = open).testTag("mio-album-cover"))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(
+                Modifier.weight(1f).heightIn(min = MioSpacing.touch)
+                    .clickable(onClickLabel = "Mở album", onClick = open).padding(start = 2.dp),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium.copy(
+                    fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal,
+                    fontSize = 15.sp, lineHeight = 18.sp,
+                ), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (artist.isNotBlank()) Text(artist, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
+            }
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    StudioIcon(R.drawable.ic_more, "Tùy chọn album $title", Modifier.size(17.dp))
+                }
+                DropdownMenu(menu, { menu = false }) {
+                    DropdownMenuItem(text = { Text("Phát album") }, onClick = { menu = false; play() })
+                    DropdownMenuItem(text = { Text("Mở album") }, onClick = { menu = false; open() })
+                }
+            }
+        }
     }
 }
+
+internal fun mioAlbumArtworkRatio(row: Int): Float = if (row == 0) 1.03f else 1.30f
