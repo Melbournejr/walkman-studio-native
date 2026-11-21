@@ -7,6 +7,7 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -60,7 +61,7 @@ private val stopKey = CassetteSprite(R.drawable.mio_cassette_key_stop, CassetteR
 private val playKey = CassetteSprite(R.drawable.mio_cassette_key_pause, CassetteRect(466, 1229, 194, 165))
 private val nextKey = CassetteSprite(R.drawable.mio_cassette_key_next, CassetteRect(672, 1229, 181, 165))
 
-private fun CassetteRect.place(unit: Dp) = Modifier.offset(unit * x, unit * y).size(unit * width, unit * height)
+private fun CassetteRect.place(unit: Dp, originY: Int = 0) = Modifier.offset(unit * x, unit * (y - originY)).size(unit * width, unit * height)
 
 @Composable
 private fun Sprite(sprite: CassetteSprite, modifier: Modifier) {
@@ -70,17 +71,19 @@ private fun Sprite(sprite: CassetteSprite, modifier: Modifier) {
 @Composable
 internal fun MioCassetteSprites(
     state: CassetteScreenState, actions: CassetteActions, rotation: State<Double>,
-    progress: Float, tapeSeek: Modifier, seek: @Composable () -> Unit,
+    tapeSeek: Modifier, seek: @Composable (Boolean) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val labelInk = Color(0xFF35271B)
     val title = state.title.ifBlank { "Chưa chọn bài" }
     BoxWithConstraints(Modifier.fillMaxSize().mioGraphite().clipToBounds()) {
         // Keep the approved 390 dp portrait scale on large phones. On short
         // windows, scroll before shrinking the hardware below a usable width.
-        val minimumWidth = if (maxWidth > maxHeight) 300.dp else 320.dp
+        if (maxWidth > maxHeight) {
+            MioLandscapeCassette(state, actions, rotation, tapeSeek, seek)
+            return@BoxWithConstraints
+        }
         val canvasWidth = minOf(maxWidth * 1.018f, 390.dp * 1.018f,
-            (maxHeight * (941f / 1672f)).coerceAtLeast(minimumWidth))
+            (maxHeight * (941f / 1672f)).coerceAtLeast(320.dp))
         val unit = canvasWidth / 941
         val canvasHeight = unit * 1672
         val top = ((maxHeight - canvasHeight).coerceAtLeast(0.dp) * .42f).coerceAtMost(40.dp)
@@ -89,76 +92,7 @@ internal fun MioCassetteSprites(
             Box(Modifier.requiredWidth(canvasWidth).height(canvasHeight)) {
                 Sprite(housing, housing.bounds.place(unit))
                 Spacer(CassetteRect(20, 154, 900, 1449).place(unit).testTag("mio-case"))
-                // The forged tape texture stays still while both exposed hubs turn.
-                Sprite(tapeBed, tapeBed.bounds.place(unit))
-                Canvas(tapeBed.bounds.place(unit).clipToBounds()) {
-                    drawRect(Brush.verticalGradient(listOf(Color(0xE60A0909), Color(0xA6160D0B), Color(0xDF090909))))
-                    for ((index, x) in listOf(.225f, .763f).withIndex()) {
-                        val center = Offset(size.width * x, size.height * .50f)
-                        val radius = size.height * if (index == 0) .73f else .76f
-                        drawCircle(Brush.radialGradient(0f to Color(0xFF12100E),
-                            .65f to Color(0xFF4F2717), .90f to Color(0xFF2B1B15), 1f to Color.Transparent,
-                            center = center, radius = radius), radius, center)
-                        repeat(14) { winding ->
-                            drawCircle(Color(0xFFAD7850).copy(alpha = if (winding % 3 == 0) .24f else .10f),
-                                radius * (.55f + winding * .030f), center, style = Stroke(.48.dp.toPx()))
-                        }
-                    }
-                    drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .34f), Color.Transparent,
-                        Color.Transparent, Color.Black.copy(alpha = .38f))))
-                }
-                Sprite(leftReel, leftReel.bounds.place(unit).graphicsLayer {
-                    transformOrigin = TransformOrigin(.5f, .5f)
-                    rotationZ = (-rotation.value * .92 % 360).toFloat()
-                })
-                Sprite(rightReel, rightReel.bounds.place(unit).graphicsLayer {
-                    transformOrigin = TransformOrigin(.5f, .5f)
-                    rotationZ = (-rotation.value * 1.14 % 360).toFloat()
-                })
-                Canvas(CassetteRect(89, 484, 768, 260).place(unit)) {
-                    val rim = CornerRadius(5.dp.toPx())
-                    drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = .10f), Color.Transparent,
-                        Color.White.copy(alpha = .035f)), endY = size.height), cornerRadius = rim)
-                    drawRoundRect(Color.White.copy(alpha = .19f), cornerRadius = rim, style = Stroke(.65.dp.toPx()))
-                }
-                Sprite(label, label.bounds.place(unit).clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
-                Sprite(frame, frame.bounds.place(unit).testTag("mio-window"))
-                Box(CassetteRect(76, 374, 779, 105).place(unit)
-                    .background(Brush.horizontalGradient(listOf(Color(0x18F5E9CF), Color(0x58FFF8E1), Color(0x00FFF8E1))))) {
-                    Canvas(Modifier.fillMaxHeight().width(unit * 86)) {
-                        val bands = listOf(Color(0xFFBA553B), Color(0xFFC87148), Color(0xFFBB8B4A))
-                        for ((i, ink) in bands.withIndex()) {
-                            val start = size.width * (.12f + .25f * i)
-                            val stripe = size.width * .16f
-                            drawPath(Path().apply {
-                                moveTo(start + size.width * .20f, 0f)
-                                lineTo(start + size.width * .20f + stripe, 0f)
-                                lineTo(start + stripe, size.height)
-                                lineTo(start, size.height)
-                                close()
-                            }, ink)
-                        }
-                    }
-                    Row(Modifier.fillMaxSize().padding(start = unit * 108, end = unit * 32),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BasicText(title, Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleLarge.copy(color = labelInk, fontFamily = FontFamily.Cursive, fontStyle = FontStyle.Normal, fontWeight = FontWeight.Normal),
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            autoSize = TextAutoSize.StepBased(11.sp, 28.sp, 1.sp))
-                        VerticalDivider(Modifier.height(unit * 48), color = labelInk.copy(alpha = .35f))
-                        Text("C-60", style = MaterialTheme.typography.titleMedium, color = labelInk, maxLines = 1)
-                    }
-                }
-                Box(CassetteRect(82, 487, 779, 268).place(unit).then(tapeSeek))
-                Row(CassetteRect(137, 777, 673, 55).place(unit), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("TYPE I / NORMAL", color = colors.primary, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-                    HorizontalDivider(
-                        Modifier.weight(1f).padding(horizontal = 7.dp),
-                        color = colors.primary.copy(alpha = .5f),
-                    )
-                    Text("MIO STUDIO", color = colors.primary, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-                }
+                MioTapeFace(state, rotation, tapeSeek, unit, originY = 0)
 
                 val latched = CassetteKeyModel.latched(state.requested, state.playbackState)
                 SpriteKey(previousKey, unit, "Bài trước", actions.previous)
@@ -176,27 +110,13 @@ internal fun MioCassetteSprites(
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                             autoSize = TextAutoSize.StepBased(8.sp, 13.sp, 1.sp))
                     }
-                    Canvas(Modifier.width(unit * 270).height(unit * 62)) {
-                        val bars = 26
-                        val step = size.width / bars
-                        repeat(bars) { index ->
-                            val height = size.height * (.21f + .63f * index / (bars - 1) + .09f * kotlin.math.sin(index * .8f))
-                            drawRect(colors.primary.copy(alpha = if ((index + 1f) / bars <= progress) .95f else .18f),
-                                Offset(index * step, size.height - height), Size(step * .52f, height))
-                        }
-                    }
+                    MioSpectrum(state.playing, Modifier.width(unit * 270).height(unit * 62))
                 }
                 Spacer(CassetteRect(64, 1229, 800, 165).place(unit).testTag("mio-key-row"))
-                Box(Modifier.offset(unit * 110, unit * 1042).width(unit * 724)) { seek() }
+                Box(Modifier.offset(unit * 110, unit * 1042).width(unit * 724)) { seek(false) }
 
                 Row(Modifier.offset(unit * 78, unit * 1440).width(unit * 785), horizontalArrangement = Arrangement.SpaceBetween) {
-                    IconButton(onClick = actions.queue) { StudioIcon(R.drawable.ic_queue, "Hàng đợi") }
-                    IconButton(onClick = actions.sound) { StudioIcon(R.drawable.ic_audio_controls, "Cài đặt âm thanh") }
-                    IconToggleButton(state.favorite, { actions.favorite() }) {
-                        StudioIcon(if (state.favorite) R.drawable.ic_favorite else R.drawable.ic_mio_heart, "Yêu thích bài hát")
-                    }
-                    IconToggleButton(state.shuffled, { actions.shuffle() }) { StudioIcon(R.drawable.ic_shuffle, "Ngẫu nhiên") }
-                    IconToggleButton(state.repeatOne, { actions.repeat() }) { StudioIcon(R.drawable.ic_repeat, "Lặp một bài") }
+                    MioCassetteUtilities(state, actions)
                 }
                 Row(Modifier.offset(y = unit * 28).fillMaxWidth().padding(horizontal = 17.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -216,26 +136,176 @@ internal fun MioCassetteSprites(
 }
 
 @Composable
+private fun MioLandscapeCassette(state: CassetteScreenState, actions: CassetteActions, rotation: State<Double>,
+    tapeSeek: Modifier, seek: @Composable (Boolean) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val latched = CassetteKeyModel.latched(state.requested, state.playbackState)
+    Column(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp).testTag("mio-landscape-deck"),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = actions.close) { StudioIcon(R.drawable.ic_expand, "Trở lại") }
+            Text("Retro Studio", Modifier.weight(1f), color = colors.primary, maxLines = 1,
+                style = MaterialTheme.typography.titleMedium, overflow = TextOverflow.Ellipsis)
+            MioCassetteUtilities(state, actions)
+            IconButton(onClick = actions.palette) { StudioIcon(R.drawable.ic_more, "Tùy chọn Retro") }
+        }
+        val panelShape = RoundedCornerShape(15.dp)
+        Row(Modifier.fillMaxWidth().weight(1f).clip(panelShape)
+            .background(Brush.verticalGradient(listOf(Color(0xFF47413A), Color(0xFF22201E), Color(0xFF302A24))))
+            .border(1.dp, colors.primary.copy(alpha = .40f), panelShape).padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            BoxWithConstraints(Modifier.weight(1.45f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                val unit = minOf(maxWidth / 941, maxHeight / 553)
+                Box(Modifier.size(unit * 941, unit * 553).clipToBounds()) {
+                    MioTapeFace(state, rotation, tapeSeek, unit, originY = 323)
+                }
+            }
+            Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFF0E0E0E)).padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(state.title.ifBlank { "Chưa chọn bài" }, style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(listOf(state.artist, state.album).filter(String::isNotBlank).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                MioSpectrum(state.playing, Modifier.weight(1f).fillMaxWidth())
+                seek(true)
+            }
+        }
+        Row(Modifier.fillMaxWidth().height(56.dp).testTag("mio-key-row"),
+            horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            MioCassetteKey(previousKey, "Bài trước", actions.previous, Modifier.weight(1f).fillMaxHeight(), R.drawable.ic_previous)
+            MioCassetteKey(stopKey, "Dừng phát", actions.stop, Modifier.weight(1f).fillMaxHeight(), R.drawable.ic_stop)
+            MioCassetteKey(playKey, if (latched) "Tạm dừng" else "Phát", actions.toggle,
+                Modifier.weight(1f).fillMaxHeight(), if (latched) R.drawable.ic_pause else R.drawable.ic_play)
+            MioCassetteKey(nextKey, "Bài tiếp", actions.next, Modifier.weight(1f).fillMaxHeight(), R.drawable.ic_next)
+        }
+    }
+}
+
+@Composable
+private fun MioCassetteUtilities(state: CassetteScreenState, actions: CassetteActions) {
+    IconButton(onClick = actions.queue) { StudioIcon(R.drawable.ic_queue, "Hàng đợi") }
+    IconButton(onClick = actions.sound) { StudioIcon(R.drawable.ic_audio_controls, "Cài đặt âm thanh") }
+    IconToggleButton(state.favorite, { actions.favorite() }) {
+        StudioIcon(if (state.favorite) R.drawable.ic_favorite else R.drawable.ic_mio_heart, "Yêu thích bài hát")
+    }
+    IconToggleButton(state.shuffled, { actions.shuffle() }) { StudioIcon(R.drawable.ic_shuffle, "Ngẫu nhiên") }
+    IconToggleButton(state.repeatOne, { actions.repeat() }) { StudioIcon(R.drawable.ic_repeat, "Lặp một bài") }
+}
+
+@Composable
+private fun MioTapeFace(state: CassetteScreenState, rotation: State<Double>, tapeSeek: Modifier,
+    unit: Dp, originY: Int) {
+    val colors = MaterialTheme.colorScheme
+    val labelInk = Color(0xFF35271B)
+    val title = state.title.ifBlank { "Chưa chọn bài" }
+    // The forged tape texture stays still while both exposed hubs turn.
+    Sprite(tapeBed, tapeBed.bounds.place(unit, originY))
+    Canvas(tapeBed.bounds.place(unit, originY).clipToBounds()) {
+        drawRect(Brush.verticalGradient(listOf(Color(0xE60A0909), Color(0xA6160D0B), Color(0xDF090909))))
+        for ((index, x) in listOf(.225f, .763f).withIndex()) {
+            val center = Offset(size.width * x, size.height * .50f)
+            val radius = size.height * if (index == 0) .73f else .76f
+            drawCircle(Brush.radialGradient(0f to Color(0xFF12100E),
+                .65f to Color(0xFF4F2717), .90f to Color(0xFF2B1B15), 1f to Color.Transparent,
+                center = center, radius = radius), radius, center)
+            repeat(14) { winding ->
+                drawCircle(Color(0xFFAD7850).copy(alpha = if (winding % 3 == 0) .24f else .10f),
+                    radius * (.55f + winding * .030f), center, style = Stroke(.48.dp.toPx()))
+            }
+        }
+        drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .34f), Color.Transparent,
+            Color.Transparent, Color.Black.copy(alpha = .38f))))
+    }
+    Sprite(leftReel, leftReel.bounds.place(unit, originY).graphicsLayer {
+        transformOrigin = TransformOrigin(.5f, .5f)
+        rotationZ = (-rotation.value * .92 % 360).toFloat()
+    })
+    Sprite(rightReel, rightReel.bounds.place(unit, originY).graphicsLayer {
+        transformOrigin = TransformOrigin(.5f, .5f)
+        rotationZ = (-rotation.value * 1.14 % 360).toFloat()
+    })
+    Canvas(CassetteRect(89, 484, 768, 260).place(unit, originY)) {
+        val rim = CornerRadius(5.dp.toPx())
+        drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = .10f), Color.Transparent,
+            Color.White.copy(alpha = .035f)), endY = size.height), cornerRadius = rim)
+        drawRoundRect(Color.White.copy(alpha = .19f), cornerRadius = rim, style = Stroke(.65.dp.toPx()))
+    }
+    Sprite(label, label.bounds.place(unit, originY).clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
+    Sprite(frame, frame.bounds.place(unit, originY).testTag("mio-window"))
+    Box(CassetteRect(76, 374, 779, 105).place(unit, originY)
+        .background(Brush.horizontalGradient(listOf(Color(0x18F5E9CF), Color(0x58FFF8E1), Color(0x00FFF8E1))))) {
+        Canvas(Modifier.fillMaxHeight().width(unit * 86)) {
+            val bands = listOf(Color(0xFFBA553B), Color(0xFFC87148), Color(0xFFBB8B4A))
+            for ((i, ink) in bands.withIndex()) {
+                val start = size.width * (.12f + .25f * i)
+                val stripe = size.width * .16f
+                drawPath(Path().apply {
+                    moveTo(start + size.width * .20f, 0f)
+                    lineTo(start + size.width * .20f + stripe, 0f)
+                    lineTo(start + stripe, size.height)
+                    lineTo(start, size.height)
+                    close()
+                }, ink)
+            }
+        }
+        Row(Modifier.fillMaxSize().padding(start = unit * 108, end = unit * 32),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BasicText(title, Modifier.weight(1f),
+                style = MaterialTheme.typography.titleLarge.copy(color = labelInk, fontFamily = FontFamily.Cursive, fontStyle = FontStyle.Normal, fontWeight = FontWeight.Normal),
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                autoSize = TextAutoSize.StepBased(11.sp, 28.sp, 1.sp))
+            VerticalDivider(Modifier.height(unit * 48), color = labelInk.copy(alpha = .35f))
+            Text("C-60", style = MaterialTheme.typography.titleMedium, color = labelInk, maxLines = 1)
+        }
+    }
+    Box(CassetteRect(82, 487, 779, 268).place(unit, originY).then(tapeSeek))
+    Row(CassetteRect(137, 777, 673, 55).place(unit, originY), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("TYPE I / NORMAL", color = colors.primary, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        HorizontalDivider(
+            Modifier.weight(1f).padding(horizontal = 7.dp),
+            color = colors.primary.copy(alpha = .5f),
+        )
+        Text("MIO STUDIO", color = colors.primary, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+    }
+}
+
+@Composable
 private fun SpriteKey(sprite: CassetteSprite, unit: Dp, description: String, action: (() -> Unit)?, @DrawableRes icon: Int? = null) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val view = LocalView.current
     val bounds = sprite.bounds
     val width = maxOf(48.dp, unit * bounds.width)
     val height = maxOf(48.dp, unit * bounds.height)
-    Box(Modifier.offset(unit * (bounds.x + bounds.width / 2f) - width / 2,
-        unit * (bounds.y + bounds.height / 2f) - height / 2).size(width, height)
-        .clickable(interaction, indication = null, enabled = action != null, role = Role.Button) {
+    MioCassetteKey(sprite, description, action, Modifier.offset(unit * (bounds.x + bounds.width / 2f) - width / 2,
+        unit * (bounds.y + bounds.height / 2f) - height / 2).size(width, height), icon,
+        Modifier.size(unit * bounds.width, unit * bounds.height))
+}
+
+@Composable
+private fun MioCassetteKey(sprite: CassetteSprite, description: String, action: (() -> Unit)?,
+    modifier: Modifier, @DrawableRes icon: Int? = null, texture: Modifier? = null) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val view = LocalView.current
+    Box(modifier.clickable(interaction, indication = null, enabled = action != null, role = Role.Button) {
             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
             action?.invoke()
         }
         .semantics { contentDescription = description }, contentAlignment = Alignment.Center) {
-        Box(Modifier.size(unit * bounds.width, unit * bounds.height).graphicsLayer {
+        val brass = sprite == playKey
+        val keyShape = RoundedCornerShape(7.dp)
+        val surface = texture ?: Modifier.fillMaxSize().clip(keyShape).background(Brush.verticalGradient(
+            if (brass) listOf(Color(0xFFF3CE93), Color(0xFFA36C38), Color(0xFF614021))
+            else listOf(Color(0xFF635C51), Color(0xFF292725), Color(0xFF171717))
+        )).border(1.dp, Color(0xFFAB967A), keyShape)
+        Box(surface.graphicsLayer {
             translationY = if (pressed) 1.5.dp.toPx() else 0f
             alpha = if (pressed) .78f else 1f
         }, contentAlignment = Alignment.Center) {
-            Sprite(sprite, Modifier.matchParentSize())
-            if (icon != null) Icon(painterResource(icon), null, Modifier.size(27.dp), tint = Color(0xFF35271B))
+            if (texture != null) Sprite(sprite, Modifier.matchParentSize())
+            if (icon != null) Icon(painterResource(icon), null, Modifier.size(27.dp),
+                tint = if (brass) Color(0xFF35271B) else Color(0xFFF3E6D4))
         }
     }
 }

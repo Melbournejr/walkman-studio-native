@@ -4,6 +4,7 @@ package com.walkmanstudio.nativeplayer
 
 import android.app.Activity
 import android.content.Intent
+import android.content.res.Configuration
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
@@ -12,6 +13,10 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -59,13 +64,29 @@ class MainActivity : ComponentActivity() {
             val walkman by model.walkmanTheme.collectAsStateWithLifecycle()
             val mode by model.nowPlayingMode.collectAsStateWithLifecycle()
             val alwaysLandscape by model.cassetteLandscape.collectAsStateWithLifecycle()
-            val dark = if (nowPlaying && mode != NowPlayingMode.CLASSIC) walkman.dark else mioDarkTheme(appearance)
+            val dark = if (nowPlaying && mode == NowPlayingMode.CASSETTE) true
+                else if (nowPlaying && mode != NowPlayingMode.CLASSIC) walkman.dark else mioDarkTheme(appearance)
+            val immersive = nowPlaying && mode == NowPlayingMode.CASSETTE &&
+                LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
             SideEffect {
                 val orientation = CassetteOrientation.requested(nowPlaying, mode, alwaysLandscape)
                 if (requestedOrientation != orientation) requestedOrientation = orientation
                 val style = if (dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                     else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
+            androidx.compose.runtime.DisposableEffect(immersive) {
+                val bars = WindowCompat.getInsetsController(window, window.decorView)
+                if (immersive) {
+                    bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    bars.hide(WindowInsetsCompat.Type.systemBars())
+                }
+                onDispose {
+                    if (immersive) {
+                        bars.show(WindowInsetsCompat.Type.systemBars())
+                        bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                    }
+                }
             }
             val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK) result.data?.data?.let(model::addTree)

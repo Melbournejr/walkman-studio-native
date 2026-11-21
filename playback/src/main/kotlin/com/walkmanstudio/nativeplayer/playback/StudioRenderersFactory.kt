@@ -7,6 +7,7 @@ import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.audio.*
+import java.nio.ByteBuffer
 
 @androidx.annotation.OptIn(UnstableApi::class)
 class StudioRenderersFactory(context:Context,private val state:DspState,private val decoded:(Format)->Unit,
@@ -23,9 +24,17 @@ class StudioRenderersFactory(context:Context,private val state:DspState,private 
                 if (output !is AudioTrackAudioOutput) return output
                 val track = output.audioTrack
                 observedTrack(track)
+                val spectrum = PcmSpectrumTap(config.encoding, config.sampleRate, track.channelCount)
                 return object : ForwardingAudioOutput(output) {
                     override fun setVolume(volume: Float) { super.setVolume(volume); observedVolume(track, volume) }
-                    override fun release() { releasedTrack(track); super.release() }
+                    override fun write(buffer: ByteBuffer, size: Int, presentationTimeUs: Long): Boolean {
+                        val start = buffer.position()
+                        val result = super.write(buffer, size, presentationTimeUs)
+                        spectrum.written(buffer, start)
+                        return result
+                    }
+                    override fun flush() { spectrum.reset(); super.flush() }
+                    override fun release() { spectrum.reset(); releasedTrack(track); super.release() }
                 }
             }
         }

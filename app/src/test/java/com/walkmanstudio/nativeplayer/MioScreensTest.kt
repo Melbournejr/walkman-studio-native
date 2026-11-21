@@ -278,7 +278,7 @@ class MioScreensTest {
             StudioTheme("dark") {
                 Surface(Modifier.size(390.dp, 844.dp).testTag("mio-preview")) {
                     MioCassetteSprites(CassetteScreenState(title = "Bên kia mùa mưa"), CassetteActions(),
-                        angle, .25f, Modifier) {}
+                        angle, Modifier) {}
                 }
             }
         }
@@ -325,14 +325,24 @@ class MioScreensTest {
     @Config(qualifiers = "w844dp-h390dp-mdpi")
     @Test fun landscapeStudioKeepsCassetteAndTransportReachableWithSavedPalette() {
         var stopInvoked = false
+        lateinit var view: View
         compose.setContent {
-            CassettePlayerScreen(WalkmanTheme.TPS_L2, CassetteScreenState(title = "Mưa chiều"),
-                CassetteActions(stop = { stopInvoked = true }), visible = false)
+            view = LocalView.current
+            Surface(Modifier.fillMaxSize().testTag("mio-preview")) {
+                CassettePlayerScreen(WalkmanTheme.TPS_L2,
+                    CassetteScreenState(title = "Mưa chiều", artist = "Mio", durationMs = 240000),
+                    CassetteActions(stop = { stopInvoked = true }), visible = false)
+            }
         }
         compose.onNodeWithText("Retro Studio").assertIsDisplayed()
         compose.onNodeWithTag("mio-window", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithContentDescription("Dừng phát").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Phổ tần âm nhạc").assertIsDisplayed()
+        val deck = compose.onNodeWithTag("mio-landscape-deck").getUnclippedBoundsInRoot()
+        val keys = compose.onNodeWithTag("mio-key-row").getUnclippedBoundsInRoot()
+        assertTrue("Transport spans the wide layout", (keys.right - keys.left).value > (deck.right - deck.left).value * .90f)
+        compose.onNodeWithContentDescription("Dừng phát").assertIsDisplayed().performClick()
         assertTrue(stopInvoked)
+        savePreview("retro-landscape", view)
     }
 
     @Test fun compactPlayerKeepsActionsAtLargeFontWithMissingArtwork() {

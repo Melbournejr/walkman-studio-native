@@ -122,14 +122,22 @@ internal fun MioNowPlaying(
                 horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically) {
                 cover()
-                controls()
+                Column(Modifier.width(coverWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    controls()
+                    if (state.playing) MioSpectrum(true, Modifier.fillMaxWidth().height(42.dp))
+                }
             }
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 28.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 cover()
                 controls()
-                if (state.id != null) MioWaveFooter(Modifier.fillMaxWidth().height(84.dp).offset(y = (-14).dp))
+                if (state.id != null) {
+                    Box(Modifier.fillMaxWidth().height(76.dp).offset(y = (-14).dp), contentAlignment = Alignment.Center) {
+                        MioWaveFooter(Modifier.matchParentSize())
+                        if (state.playing) MioSpectrum(true, Modifier.width(coverWidth).height(48.dp))
+                    }
+                }
             }
         }
     }

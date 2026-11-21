@@ -145,7 +145,7 @@ internal fun CassetteDeckScreen(
             BoxWithConstraints(modifier.fillMaxSize().background(theme.body).testTag("cassette-player")) {
                 val viewportHeight = maxHeight
                 if (studio) {
-                    MioCassetteSprites(state, actions, rotation, progress, deckSeek) { seek(false) }
+                    MioCassetteSprites(state, actions, rotation, deckSeek, seek)
                 } else if (maxWidth > maxHeight) {
                     // Landscape is a full-width instrument panel. Its tape artwork is
                     // redrawn for this viewport; the portrait cassette is never stretched.
