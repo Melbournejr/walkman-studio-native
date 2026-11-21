@@ -50,6 +50,7 @@ data class PlaybackUi(
     val queueIndex: Int = 0, val shuffled: Boolean = false,
     val album: String = "", val seekEnabled: Boolean = false, val timelineKnown: Boolean = false,
     val playbackState: Int = Player.STATE_IDLE,
+    val tapeDiscontinuity: Long = 0L,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -70,8 +71,13 @@ class PlaybackViewModel(context: Context) : ViewModel() {
     val currentTrack = currentId.flatMapLatest { id -> if (id == null) flowOf(null) else LibraryDatabase.getInstance(app).libraryDao().observeTrack(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     val queue = MutableStateFlow<List<MediaItem>>(emptyList())
+    private var tapeDiscontinuity = 0L
     private val listener = object : Player.Listener {
-        override fun onEvents(player: Player, events: Player.Events) { publish(); queue.value = (0 until player.mediaItemCount).map(player::getMediaItemAt) }
+        override fun onEvents(player: Player, events: Player.Events) {
+            if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) tapeDiscontinuity++
+            publish()
+            queue.value = (0 until player.mediaItemCount).map(player::getMediaItemAt)
+        }
     }
     init { viewModelScope.launch { while (true) { delay(500); publish() } } }
     fun connect() {
@@ -145,7 +151,7 @@ class PlaybackViewModel(context: Context) : ViewModel() {
             detail=error?.let { "${it.errorCodeName} (${it.errorCode}); ${it.cause?.javaClass?.simpleName.orEmpty()}; ${(it.cause?.message ?: it.message).orEmpty().take(500)}" },
             sleepRemainingMs=(player.sessionExtras.getLong("sleepAt", 0) - SystemClock.elapsedRealtime()).coerceAtLeast(0), repeatOne=player.repeatMode == Player.REPEAT_MODE_ONE,
             queueIndex=player.currentMediaItemIndex.takeIf { it in 0 until player.mediaItemCount }?.plus(1) ?: 0,
-            shuffled=player.shuffleModeEnabled)
+            shuffled=player.shuffleModeEnabled, tapeDiscontinuity=tapeDiscontinuity)
     }
     fun play(track: TrackEntity, filter: TrackFilter = TrackFilter(rootId = track.rootId)) = playSelection(filter, track.id)
     private fun invalidateUsbConfirmation() {

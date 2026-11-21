@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -35,8 +36,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.imageResource
@@ -321,31 +320,34 @@ private fun StudioReel(sprite: CassetteSprite, pivot: IntOffset, axis: Offset,
     val reel = ImageBitmap.imageResource(sprite.image)
     val core = StudioTape.CORE
     val crop = 88
-    Spacer(Modifier.offset(unit * (axis.x - core), unit * (axis.y - originY - core))
-        .size(unit * core * 2f).drawWithCache {
+    Box(Modifier.offset(unit * (axis.x - core), unit * (axis.y - originY - core))
+        .size(unit * core * 2f), contentAlignment = Alignment.Center) {
+        Spacer(Modifier.matchParentSize().drawWithCache {
             val center = Offset(size.width / 2, size.height / 2)
             val radius = (size.minDimension / 2).coerceAtLeast(1f)
-            val rotor = radius * .85f
-            val clip = Path().apply {
-                addOval(androidx.compose.ui.geometry.Rect(center - Offset(rotor, rotor), center + Offset(rotor, rotor)))
-            }
             val rim = Brush.radialGradient(
                 .70f to Color(0xFF151210), .86f to Color(0xFF4B4136), .94f to Color(0xFF867663),
                 1f to Color(0xFF201C17), center = center, radius = radius,
             )
-            val dst = IntOffset((center.x - rotor).roundToInt(), (center.y - rotor).roundToInt())
-            val dstSize = IntSize((rotor * 2).roundToInt(), (rotor * 2).roundToInt())
-            onDrawBehind {
-                drawCircle(rim, radius, center)
-                clipPath(clip) {
-                    rotate(angle(), center) {
-                        drawImage(reel, srcOffset = IntOffset(pivot.x - crop, pivot.y - crop),
-                            srcSize = IntSize(crop * 2, crop * 2), dstOffset = dst, dstSize = dstSize,
-                            filterQuality = FilterQuality.Medium)
-                    }
-                }
-            }
+            onDrawBehind { drawCircle(rim, radius, center) }
         })
+        // Only the cached, circular inner bitmap rotates. The rim and winding stay in place.
+        Spacer(Modifier.size(unit * core * 1.7f)
+            .graphicsLayer {
+                shape = CircleShape
+                clip = true
+                rotationZ = angle()
+            }
+            .drawWithCache {
+                val srcOffset = IntOffset(pivot.x - crop, pivot.y - crop)
+                val srcSize = IntSize(crop * 2, crop * 2)
+                val dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())
+                onDrawBehind {
+                    drawImage(reel, srcOffset = srcOffset, srcSize = srcSize, dstSize = dstSize,
+                        filterQuality = FilterQuality.Medium)
+                }
+            })
+    }
 }
 
 @Composable

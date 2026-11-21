@@ -345,18 +345,23 @@ class MioScreensTest {
         savePreview("retro-landscape", view)
     }
 
-    @Test fun studioTapeReadsTheFrameClockWithoutWaitingForUiPosition() {
+    @Test fun studioTapeKeepsTurningBetweenControllerSamples() {
         compose.mainClock.autoAdvance = false
-        var current = 1000L
+        var reads = 0
         lateinit var tape: State<TapePacks>
         compose.setContent {
-            tape = rememberStudioTape("track", 1000L, 240000L, running = true) { current }
+            tape = rememberStudioTape("track", 1000L, 240000L, running = true, discontinuity = 0L) {
+                reads++
+                1000L
+            }
         }
         repeat(3) { compose.mainClock.advanceTimeByFrame() }
-        assertEquals(StudioTape.packs(1000.0, 240000L), tape.value)
-        current = 1500L
-        repeat(3) { compose.mainClock.advanceTimeByFrame() }
-        assertEquals(StudioTape.packs(1500.0, 240000L), tape.value)
+        val earlier = tape.value
+        val initialReads = reads
+        repeat(4) { compose.mainClock.advanceTimeByFrame() }
+        assertNotEquals(earlier.leftAngle, tape.value.leftAngle)
+        assertNotEquals(earlier.rightAngle, tape.value.rightAngle)
+        assertTrue("The controller is sampled less often than the frame clock", reads - initialReads < 4)
     }
 
     @Test fun portraitRadialHasItsOwnSquareClearOfTheSeekSlider() {

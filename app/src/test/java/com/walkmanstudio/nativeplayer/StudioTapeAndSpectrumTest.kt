@@ -38,6 +38,29 @@ class StudioTapeAndSpectrumTest {
         }
     }
 
+    @Test fun clockAdvancesEveryFrameDespiteRepeatedAndJumpingSamples() {
+        val clock = StudioTapeClock()
+        val duration = 240000L
+        var reads = 0
+        var previous = 0.0
+        repeat(180) { frame ->
+            val elapsed = frame * 16L
+            val position = clock.frame(elapsed * 1_000_000, duration, 0L) {
+                reads++
+                // Simulate a coarse controller clock and backdated refreshes.
+                1000L + (elapsed / 120) * 120
+            }
+            if (frame > 0) assertTrue("Reels continue within the allowed speed correction",
+                position - previous in 15.03..16.97)
+            previous = position
+        }
+        assertTrue(reads < 35)
+        val now = 180 * 16_000_000L
+        assertEquals(700.0, clock.frame(now, duration, 1L) { 700L }, 0.0)
+        assertEquals(716.0, clock.frame(now + 16_000_000, duration, 1L) { 700L }, 0.0)
+        assertEquals(0.0, clock.frame(now + 32_000_000, duration, 2L) { 0L }, 0.0)
+    }
+
     @Test fun visualizerEasingUsesElapsedTimeAndHoldsPeaks() {
         fun advance(fps: Int): SpectrumMotion = SpectrumMotion().apply {
             repeat(fps / 2) { update(listOf(.8f), 1f / fps) }

@@ -179,6 +179,7 @@ private fun NowPlayingContent(model: PlaybackViewModel, artwork: Modifier,theme:
                         queueCount = state.queueCount, shuffled = state.shuffled, repeatOne = state.repeatOne,
                         favorite = current?.isFavorite == true, specs = specs, error = state.error,
                         seekEnabled = state.seekEnabled, timelineKnown = state.timelineKnown, trackId = state.id,
+                        tapeDiscontinuity = state.tapeDiscontinuity,
                     ), actions, visible = visible, mode = mode) { modifier ->
                         TrackCover(track, modifier, large = true)
                     }

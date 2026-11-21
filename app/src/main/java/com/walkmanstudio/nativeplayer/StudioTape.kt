@@ -41,22 +41,52 @@ internal object StudioTape {
 
 internal data class TapePacks(val left: Float, val right: Float, val leftAngle: Float, val rightAngle: Float)
 
+/** The display clock runs between controller samples. Only actual seeks reset its phase. */
+internal class StudioTapeClock {
+    private var positionMs = 0.0
+    private var lastFrameNs: Long? = null
+    private var lastSampleNs = 0L
+    private var discontinuity = 0L
+    private var speedCorrection = 0.0
+
+    fun frame(nowNs: Long, durationMs: Long, revision: Long, readPosition: () -> Long): Double {
+        val previous = lastFrameNs
+        lastFrameNs = nowNs
+        if (previous == null || revision != discontinuity) {
+            discontinuity = revision
+            positionMs = readPosition().toDouble()
+            speedCorrection = 0.0
+            lastSampleNs = nowNs
+        } else {
+            positionMs += (nowNs - previous).coerceAtLeast(0) / 1_000_000.0 * (1.0 + speedCorrection)
+            if (nowNs - lastSampleNs >= 100_000_000L) {
+                // Small bounded speed changes converge on the player position without a stop or jump.
+                speedCorrection = ((readPosition() - positionMs) / 900.0).coerceIn(-.06, .06)
+                lastSampleNs = nowNs
+            }
+        }
+        positionMs = positionMs.coerceIn(0.0, durationMs.toDouble())
+        return positionMs
+    }
+}
+
 @Composable
 internal fun rememberStudioTape(
-    track: String?, positionMs: Long, durationMs: Long, running: Boolean,
+    track: String?, positionMs: Long, durationMs: Long, running: Boolean, discontinuity: Long,
     readPosition: (String) -> Long?,
 ): State<TapePacks> {
     val rendered = remember(track, durationMs) { mutableStateOf(StudioTape.packs(positionMs.toDouble(), durationMs)) }
     val position = rememberUpdatedState(positionMs)
+    val revision = rememberUpdatedState(discontinuity)
     val positionReader = rememberUpdatedState(readPosition)
     LaunchedEffect(track, durationMs, running) {
         if (!running || track == null || durationMs <= 0) return@LaunchedEffect
-        // MediaController extrapolates its cached position locally. Reading on the frame
-        // clock keeps the reels independent of the slower Now Playing state refresh.
+        val clock = StudioTapeClock()
+        val read = { positionReader.value(track) ?: position.value }
         while (isActive) {
-            withFrameNanos {
-                val current = positionReader.value(track) ?: position.value
-                rendered.value = StudioTape.packs(current.toDouble(), durationMs)
+            withFrameNanos { now ->
+                val current = clock.frame(now, durationMs, revision.value, read)
+                rendered.value = StudioTape.packs(current, durationMs)
             }
         }
     }
